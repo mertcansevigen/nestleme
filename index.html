@@ -62,6 +62,9 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .item .sz{font:600 13px var(--mono);color:var(--muted);margin-top:3px}
 .ictl{display:flex;gap:8px;align-items:center}
 .ictl .lab{display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:var(--muted)}
+.gscale{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 12px}
+.gscale b{display:block;font-size:13px}.gscale small{color:var(--muted);font-size:11.5px}
+.gscale .rt button{font-size:13px;padding:7px 14px}
 .rt{display:flex;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:2px;gap:2px}
 .rt button{border:none;background:none;color:var(--muted);font:600 12px var(--mono);padding:6px 9px;border-radius:6px;cursor:pointer}
 .rt button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
@@ -156,7 +159,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
-        <p class="sub">Her sayfa ayrı bir iş. Standart 1:1. Dosya 10 kat küçük çizildiyse 1:10 seç; ölçü gerçek boyutta gösterilir.</p>
+        <div class="gscale"><div><b>Tüm dosyaların ölçeği</b><small>1:10 seçilirse yüklenen her şey 10 kat büyütülür</small></div><div class="rt" id="gRatio"><button data-g="1">1:1</button><button data-g="10">1:10</button></div></div>
         <label class="drop" id="drop">
           <input type="file" id="fileIn" accept=".pdf,.ai,application/pdf,application/postscript,application/illustrator" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
           <b>PDF dosyalarını buraya bırak veya seçmek için tıkla</b>
@@ -328,7 +331,7 @@ const DEFAULTS = {
   cutMode: 'shape', bleed: 3, cutSource: 'auto', hideLines: true,
   gapMode: 'auto', gapUnverified: 3, gapManual: 2, rot90: true, rot180: true, res: 'auto', sort: 'area', opt: 'bal',
   regOn: true, regProfile: 'qcut', regDia: 5, regEdge: 10, regClear: 3, regMaxGap: 500, regPair: 20, feed: 'BR',
-  cutWidth: 0.25, jobName: ''
+  cutWidth: 0.25, jobName: '', gRatio: 1
 };
 const LS = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
 let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings') || '{}')) };
@@ -694,7 +697,7 @@ async function loadPdf(name, bytes, size, qtys) {
     const crop = bbInter([cb.x, cb.y, cb.x + cb.width, cb.y + cb.height], [mb.x, mb.y, mb.x + mb.width, mb.y + mb.height]);
     const tbx = page.getTrimBox(); const trim = bbInter([tbx.x, tbx.y, tbx.x + tbx.width, tbx.y + tbx.height], crop);
     const it = { id: ++uid, file, pageIndex: i, page, name: pages.length > 1 ? `${name} · s.${i + 1}` : name, pageBox: crop, trimBox: trim,
-      qty: qtys ? (qtys[i] || 1) : 1, scale: 100, rotate: true, an: null, geom: null, thumb: null };
+      qty: qtys ? (qtys[i] || 1) : 1, scale: (S.gRatio || 1) * 100, rotate: true, an: null, geom: null, thumb: null };
     it.an = safeAnalyze(it);
     items.push(it);
     await renderThumb(it);
@@ -1360,7 +1363,9 @@ function setStatus(t, cls = '') { const s = $('#status'); s.textContent = t; s.c
 function showBar(v) { const b = $('#bar'); if (v < 0) { b.style.display = 'none'; return } b.style.display = 'block'; b.firstElementChild.style.width = (v * 100).toFixed(0) + '%'; }
 let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3200); }
 
-bindSettings(); updateRevLbl();
+function syncG() { $$('#gRatio button').forEach(b => b.classList.toggle('on', +b.dataset.g === (S.gRatio || 1))); }
+$$('#gRatio button').forEach(b => b.onclick = () => { S.gRatio = +b.dataset.g; syncG(); for (const it of items) it.scale = S.gRatio * 100; renderItems(); scheduleNest(100); toast(S.gRatio === 10 ? 'Tüm dosyalar 10 kat büyütüldü (1:10)' : 'Tüm dosyalar gerçek ölçüde (1:1)'); });
+syncG(); bindSettings(); updateRevLbl();
 window.__nest = { offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
 </script>
 </body>
