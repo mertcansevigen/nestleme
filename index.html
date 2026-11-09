@@ -55,19 +55,18 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .drop b{display:block;margin-bottom:4px}
 .drop small{color:var(--muted)}
 .items{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:520px;overflow:auto;padding-right:2px}
-.item{display:grid;grid-template-columns:64px 1fr;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px}
-.item canvas{width:64px;height:64px;object-fit:contain;background:#0c0c0d;border-radius:6px}
-.item .nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.item .meta{font:11.5px var(--mono);color:var(--muted);margin:2px 0 6px}
-.badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
-.badge{font:600 10px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var(--line2);color:var(--muted)}
-.badge.cut{color:#ffb4b4;border-color:rgba(255,45,45,.5)}
-.badge.ok{color:#9ff0c9;border-color:rgba(62,207,142,.45)}
-.badge.warn{color:#ffd58a;border-color:rgba(255,176,32,.5)}
-.ictl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.ictl label{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
-.ictl input[type=number]{width:62px}
-.x{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px}
+.item{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.item canvas{width:56px;height:56px;background:#2a2c31;border-radius:6px}
+.item .mid{min-width:0}
+.item .nm{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .sz{font:600 13px var(--mono);color:var(--muted);margin-top:3px}
+.ictl{display:flex;gap:8px;align-items:center}
+.ictl .lab{display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:var(--muted)}
+.rt{display:flex;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:2px;gap:2px}
+.rt button{border:none;background:none;color:var(--muted);font:600 12px var(--mono);padding:6px 9px;border-radius:6px;cursor:pointer}
+.rt button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+.ictl input[type=number]{width:64px;padding:6px 8px}
+.x{background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;padding:0 2px;align-self:center}
 .x:hover{color:var(--cut)}
 .totals{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:10px}
 .totals b{color:var(--text);font-family:var(--mono)}
@@ -79,6 +78,7 @@ input[type=number],input[type=text],select{background:#121315;border:1px solid v
 input:focus,select:focus{border-color:#5a5d66}
 input[type=number]{font-family:var(--mono)}
 .chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.f.chk{flex-direction:row;align-items:center}
 .chk input{accent-color:var(--cut);width:16px;height:16px}
 .seg{display:flex;background:#121315;border:1px solid var(--line2);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;white-space:nowrap;border:none;background:none;padding:7px 8px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:600;font-size:12.5px}
@@ -156,7 +156,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
-        <p class="sub">Her sayfa ayrı bir iş olarak listelenir. Gerçek ölçü ve vektörler korunur.</p>
+        <p class="sub">Her sayfa ayrı bir iş. Standart 1:1. Dosya 10 kat küçük çizildiyse 1:10 seç; ölçü gerçek boyutta gösterilir.</p>
         <label class="drop" id="drop">
           <input type="file" id="fileIn" accept=".pdf,.ai,application/pdf,application/postscript,application/illustrator" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
           <b>PDF dosyalarını buraya bırak veya seçmek için tıkla</b>
@@ -1116,40 +1116,33 @@ function renderTable() {
   if (!layout) return;
   const rows = new Map();
   layout.sheets.forEach((s, si) => s.pl.forEach(p => { const k = p.it.id; const r = rows.get(k) || { it: p.it, n: 0, sheets: new Set() }; r.n++; r.sheets.add(si + 1); rows.set(k, r); }));
-  t.innerHTML = '<tr><th>İş</th><th>Ölçü (mm)</th><th>Kesim</th><th>Adet</th><th>Sayfa</th></tr>' +
-    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? g.wMm.toFixed(1) + '×' + g.hMm.toFixed(1) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
+  t.innerHTML = '<tr><th>İş</th><th>Ölçü (cm)</th><th>Kesim</th><th>Adet</th><th>Sayfa</th></tr>' +
+    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? fmtCm(g.wMm) + ' × ' + fmtCm(g.hMm) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /* ---------------- iş listesi ---------------- */
+function fmtCm(mm) { const v = mm / 10; return (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v).toString() : v.toFixed(1)).replace('.', ',') }
 function renderItems() {
   const el = $('#items'); el.innerHTML = '';
   for (const it of items) {
     const g = computeGeom(it);
+    const ratio = it.scale / 100;
+    const cb = subsBBox(g.cut); const wMm = (cb[2] - cb[0]) * g.s / PT, hMm = (cb[3] - cb[1]) * g.s / PT;
     const d = document.createElement('div'); d.className = 'item';
-    const tc = document.createElement('canvas'); tc.width = 128; tc.height = 128;
+    const tc = document.createElement('canvas'); tc.width = 112; tc.height = 112;
     drawItemThumb(it, tc);
-    const right = document.createElement('div');
-    const badges = [];
-    if (g.mode === 'shape') badges.push(['cut', 'ÖZEL ŞEKİL']); else badges.push(['', 'DİKDÖRTGEN']);
-    if (it.an.cut.length) badges.push(['cut', 'CUT ✓']);
-    if (it.an.bleed.length) badges.push(['ok', 'BLEED ✓']);
-    badges.push(g.verified ? ['ok', 'Bleed doğrulandı'] : ['warn', 'Bleed doğrulanmadı']);
-    right.innerHTML = `<div style="display:flex;gap:6px"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div><button class="x" title="Kaldır">×</button></div>
-      <div class="meta">${g.wMm.toFixed(1)} × ${g.hMm.toFixed(1)} mm · ${g.mode === 'shape' ? 'kontur' : 'çerçeve'}</div>
-      <div class="badges">${badges.map(b => `<span class="badge ${b[0]}">${b[1]}</span>`).join('')}</div>
-      <div class="ictl"><label>Adet <input type="number" min="0" step="1" value="${it.qty}" data-f="qty"></label>
-      <label>Ölçek % <input type="number" min="5" max="1000" step="1" value="${it.scale}" data-f="scale"></label>
-      <label class="chk" style="font-size:11.5px"><input type="checkbox" data-f="rotate" ${it.rotate ? 'checked' : ''}>90°</label></div>`;
-    right.querySelector('.x').onclick = () => { items.splice(items.indexOf(it), 1); renderItems(); scheduleNest(100); };
-    right.querySelectorAll('[data-f]').forEach(inp => inp.onchange = () => {
-      const f = inp.dataset.f;
-      if (f === 'rotate') it.rotate = inp.checked;
-      else { const v = Math.max(f === 'scale' ? 5 : 0, Math.round(+inp.value || 0)); it[f] = v; inp.value = v; }
-      if (f === 'scale') renderItems(); else updateTotals();
-      scheduleNest();
-    });
-    d.append(tc, right); el.appendChild(d);
+    const mid = document.createElement('div'); mid.className = 'mid';
+    mid.innerHTML = `<div class="nm" title="${esc(it.name)}">${esc(it.name)}</div><div class="sz">${fmtCm(wMm)} × ${fmtCm(hMm)} cm</div>`;
+    const ctl = document.createElement('div'); ctl.className = 'ictl';
+    ctl.innerHTML = `<div class="lab"><span>Ölçek</span><div class="rt">${[1, 10].map(r => `<button data-r="${r}" class="${r === ratio ? 'on' : ''}">1:${r}</button>`).join('')}</div></div>
+      <label class="lab"><span>Adet</span><input type="number" min="0" step="1" value="${it.qty}" data-f="qty"></label>
+      <button class="x" title="Kaldır">×</button>`;
+    ctl.querySelector('.x').onclick = () => { items.splice(items.indexOf(it), 1); renderItems(); scheduleNest(100); };
+    ctl.querySelectorAll('[data-r]').forEach(bt => bt.onclick = () => { it.scale = (+bt.dataset.r) * 100; renderItems(); scheduleNest(); });
+    const q = ctl.querySelector('[data-f=qty]');
+    q.onchange = () => { it.qty = Math.max(0, Math.round(+q.value || 0)); q.value = it.qty; updateTotals(); scheduleNest(); };
+    d.append(tc, mid, ctl); el.appendChild(d);
   }
   updateTotals();
 }
@@ -1160,12 +1153,11 @@ function updateTotals() {
 }
 function drawItemThumb(it, tc) {
   const c = tc.getContext('2d'); const g = it.geom, th = it.thumb; if (!th) return;
-  const fw = g.frame[2] - g.frame[0], fh = g.frame[3] - g.frame[1]; const k = Math.min(120 / fw, 120 / fh);
-  const F = [k, 0, 0, -k, (128 - fw * k) / 2 - g.frame[0] * k, (128 - fh * k) / 2 + g.frame[3] * k];
+  const fw = g.frame[2] - g.frame[0], fh = g.frame[3] - g.frame[1]; const k = Math.min(100 / fw, 100 / fh);
+  const F = [k, 0, 0, -k, (112 - fw * k) / 2 - g.frame[0] * k, (112 - fh * k) / 2 + g.frame[3] * k];
   c.save(); c.clip(path2d(rectSubs(g.clipRect), F)); if (g.poly) c.clip(path2d(polysToSubs(g.poly), F), 'evenodd');
   const G = [1 / th.ppp, 0, 0, -1 / th.ppp, th.view[0], th.view[3]]; const T = Mx.mul(G, F);
   c.setTransform(...T); c.drawImage(th.cv, 0, 0); c.restore();
-  c.strokeStyle = '#ff2d2d'; c.lineWidth = 1.2; c.stroke(path2d(g.cut, F));
 }
 
 /* ---------------- REV ---------------- */
