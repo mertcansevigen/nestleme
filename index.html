@@ -92,6 +92,22 @@ summary::after{content:'+';color:var(--muted);font-family:var(--mono)}
 details[open] summary::after{content:'–'}
 summary small{color:var(--muted);font-weight:400;margin-left:6px}
 details .fields{margin-top:10px}
+.rolls{display:flex;flex-wrap:wrap;gap:6px}
+.rolls button{border:1px solid var(--line2);background:#121315;border-radius:8px;padding:8px 12px;cursor:pointer;font:600 13px var(--mono);color:var(--muted)}
+.rolls button small{display:block;font:500 10.5px Inter;color:var(--dim);margin-top:2px}
+.rolls button.on{border-color:var(--cut);color:var(--text);background:rgba(255,45,45,.07)}
+.cmpT{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.cmpT th{text-align:left;color:var(--dim);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--line)}
+.cmpT td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--mono);color:var(--muted)}
+.cmpT tr.sel td{color:var(--text);background:rgba(62,207,142,.08)}
+.cmpT tr.sel td:last-child{color:var(--ok);font-family:Inter;font-weight:600}
+.rules{margin:12px 0 0;padding:0 0 0 18px;color:var(--muted);font-size:12.5px;line-height:1.6}
+.rules b{color:var(--text)}
+.rolls .cmp{cursor:default}
+.rolls .cmp.best{border-color:var(--ok);background:rgba(62,207,142,.07);color:var(--text)}
+.prod{margin-top:12px;background:#141517;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.prod b{color:var(--text);font-family:var(--mono)}
+.lockable.locked input,.lockable.locked select{opacity:.55;pointer-events:none}
 .note{font-size:12px;color:var(--muted);background:#141517;border:1px solid var(--line);border-left:3px solid var(--bleed);border-radius:8px;padding:8px 10px;margin-top:10px}
 .note b{color:var(--text)}
 .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
@@ -143,10 +159,10 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
 <div class="wrap">
   <div class="hero">
     <div>
-      <div class="eyebrow"><span class="tag red">Nestleme</span><span class="tag">PDF → Rulo / Tabaka</span><span class="tag">PDF'ler cihazınızda işlenir</span></div>
+      <div class="eyebrow"><span class="tag red">Nestleme</span><span class="tag">PDF → Folyo</span><span class="tag">PDF'ler cihazınızda işlenir</span></div>
       <h1>Çoklu işleri tek baskıya yerleştir.</h1>
-      <p class="lead">Birden çok PDF'i yükle, adetleri gir; özel kesim şekillerini birbirine sokarak rulo ya da tabakaya en az fireyle yerleştir. Çizgisiz baskı ve ayrı kesim dosyası aynı koordinatlarda iner.</p>
-      <div class="steps"><span><b>1</b>PDF'leri yükle</span><span><b>2</b>Medya ve aralıkları ayarla</span><span><b>3</b>Yerleşimi kontrol et, indir</span></div>
+      <p class="lead">Birden çok PDF'i yükle, adetleri gir; CUT şekillerini birbirine sokarak folyoya en az fireyle yerleştir; rulo eni otomatik seçilir. Çizgisiz baskı ve ayrı kesim dosyası aynı koordinatlarda iner.</p>
+      <div class="steps"><span><b>1</b>PDF'leri yükle</span><span><b>2</b>Folyo otomatik seçilir</span><span><b>3</b>Yerleşimi kontrol et, indir</span></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost" id="btnClear">Yeni iş / Temizle</button>
@@ -172,111 +188,18 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
       </section>
 
       <section class="card" id="ayarlar">
-        <h2><span class="n">02</span>Medya, kesim ve yerleşim</h2>
-        <p class="sub">Değişiklikler yerleşimi otomatik yeniden hesaplar.</p>
-
-        <div class="f full" style="margin-bottom:10px"><span>Medya tipi</span>
-          <div class="seg" id="segMedia"><button data-v="roll" class="on">Rulo (boy otomatik)</button><button data-v="sheet">Tabaka (sabit ölçü)</button></div>
-        </div>
-        <div class="fields">
-          <label class="f"><span>Medya eni (cm)</span><input type="number" step="0.1" min="5" data-k="mediaW"></label>
-          <label class="f" data-show="roll"><span>En fazla sayfa boyu (cm)</span><input type="number" step="1" min="10" data-k="maxLen"></label>
-          <label class="f" data-show="sheet"><span>Tabaka boyu (cm)</span><input type="number" step="0.1" min="5" data-k="sheetH"></label>
-          <label class="f"><span>Yan kenar payı (mm)</span><input type="number" step="0.5" min="0" data-k="sideMargin"></label>
-          <label class="f"><span>Baş / son payı (mm)</span><input type="number" step="0.5" min="0" data-k="headMargin"></label>
-        </div>
-
-        <div class="f full" style="margin:14px 0 10px"><span>Kesim şekli</span>
-          <div class="seg" id="segCut"><button data-v="shape" class="on">PDF'deki özel şekil</button><button data-v="rect">Dikdörtgen</button></div>
-        </div>
-        <div class="fields">
-          <label class="f"><span>Bleed / taşma (mm)</span><input type="number" step="0.5" min="0" data-k="bleed"></label>
-          <label class="f"><span>Kesim çizgisi kaynağı</span>
-            <select data-k="cutSource">
-              <option value="auto">Otomatik (CUT katmanı, kırmızı, pembe, CutContour)</option>
-              <option value="red">Yalnız kırmızı (0/100/100/0)</option>
-              <option value="magenta">Yalnız pembe / magenta</option>
-              <option value="layer">Yalnız CUT adlı katman / spot</option>
-            </select></label>
-          <label class="f full chk"><input type="checkbox" data-k="hideLines">Baskı dosyasında CUT ve BLEED çizgilerini gizle (çizgisiz baskı)</label>
-        </div>
-        <div class="note"><span class="swatch" style="background:var(--cut)"></span><b>CUT</b> CMYK 0/100/100/0 · <span class="swatch" style="background:var(--bleed)"></span><b>BLEED</b> CMYK 0/50/50/0. Özel şekilde görsel, kesim çizgisinden bleed kadar taşan bir konturla kırpılır; böylece şekiller birbirine girebilir.</div>
-
-        <details open>
-          <summary>Aralık ve döndürme <small>Yerleşim aralığı</small></summary>
-          <div class="fields">
-            <label class="f full"><span>Yerleşim aralığı</span>
-              <select data-k="gapMode">
-                <option value="auto">Otomatik — CUT + bleed doğrulanmışsa ek boşluk yok</option>
-                <option value="verified">Yalnız doğrulanmış bleed'den bleed'e</option>
-                <option value="manual">Elle ek boşluk ver</option>
-              </select></label>
-            <label class="f"><span>Doğrulanmamış dosyada boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapUnverified"></label>
-            <label class="f"><span>Elle ek boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapManual"></label>
-            <label class="f chk"><input type="checkbox" data-k="panelOn">Medyadan büyük işleri panellere böl</label>
-            <label class="f"><span>Panel bindirme (mm)</span><input type="number" step="1" min="0" data-k="overlap"></label>
-            <label class="f chk"><input type="checkbox" data-k="rot90">90° döndürmeye izin ver</label>
-            <label class="f chk"><input type="checkbox" data-k="rot180">180° döndürmeye izin ver</label>
-            <label class="f"><span>Yerleştirme hassasiyeti</span>
-              <select data-k="res">
-                <option value="auto">Otomatik</option>
-                <option value="0.5">Çok hassas · 0.5 mm</option>
-                <option value="1">Hassas · 1 mm</option>
-                <option value="2">Hızlı · 2 mm</option>
-                <option value="4">Çok hızlı · 4 mm</option>
-              </select></label>
-            <label class="f"><span>Optimizasyon</span>
-              <select data-k="opt">
-                <option value="fast">Hızlı · tek deneme</option>
-                <option value="bal">Dengeli · 4 deneme</option>
-                <option value="deep">Yoğun · 8 deneme</option>
-              </select></label>
-            <label class="f"><span>Öncelikli sıralama</span>
-              <select data-k="sort">
-                <option value="area">Büyükten küçüğe (alan)</option>
-                <option value="long">En uzun kenara göre</option>
-                <option value="perim">Çevreye göre</option>
-                <option value="order">Liste sırası (sabit)</option>
-              </select></label>
-          </div>
-        </details>
-
-        <details>
-          <summary>Register <small>Qcut / artı işaretleri</small></summary>
-          <div class="fields">
-            <label class="f full chk"><input type="checkbox" data-k="regOn">Baskı ve kesim dosyasına register ekle</label>
-            <label class="f full"><span>Register profili</span>
-              <select data-k="regProfile">
-                <option value="qcut">Qcut Platinum — çift başlangıç + ara noktalar</option>
-                <option value="cross">Standart artı</option>
-              </select></label>
-            <label class="f"><span>Register çapı / artı boyu (mm)</span><input type="number" step="0.5" min="1" data-k="regDia"></label>
-            <label class="f"><span>Nokta merkezinin kenara mesafesi (mm)</span><input type="number" step="0.5" min="1" data-k="regEdge"></label>
-            <label class="f"><span>Nokta çevresinde boş alan (mm)</span><input type="number" step="0.5" min="0" data-k="regClear"></label>
-            <label class="f"><span>En fazla register aralığı (mm)</span><input type="number" step="10" min="50" data-k="regMaxGap"></label>
-            <label class="f"><span>Başlangıç çifti merkez aralığı (mm)</span><input type="number" step="0.5" min="5" data-k="regPair"></label>
-            <label class="f"><span>Besleme başlangıcı</span>
-              <select data-k="feed">
-                <option value="BR">Alt sağ</option><option value="BL">Alt sol</option>
-                <option value="TR">Üst sağ</option><option value="TL">Üst sol</option>
-              </select></label>
-          </div>
-          <div class="note">Noktalar baskı ve kesimde aynı koordinatlardadır. Başlangıçta yan yana iki nokta, ara noktalar en fazla ayarlanan aralıkla dizilir. REV numarası yalnız baskıda, başlangıç çiftinin yanına yazılır.</div>
-        </details>
-
-        <details>
-          <summary>Kesim dosyası ve kayıtlı ayarlar</summary>
-          <div class="fields">
-            <label class="f"><span>Kesim çizgi kalınlığı (pt)</span><input type="number" step="0.05" min="0.05" data-k="cutWidth"></label>
-            <label class="f"><span>İş adı (dosya adına eklenir)</span><input type="text" data-k="jobName" placeholder="nest"></label>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-            <button class="btn sm" id="btnSaveSet">Ayarları kaydet</button>
-            <button class="btn sm" id="btnExportSet">Dışa aktar</button>
-            <label class="btn sm">İçe aktar<input type="file" id="setIn" accept=".json,application/json" hidden></label>
-            <button class="btn sm ghost" id="btnResetSet">Varsayılana dön</button>
-          </div>
-        </details>
+        <h2><span class="n">02</span>Folyo ve üretim kuralları</h2>
+        <p class="sub">Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.</p>
+        <div class="f full"><span>Folyo baskı arkası gri · rulo eni sistem tarafından seçilir</span><div id="rollCmp"></div></div>
+        <div class="prod" id="prodSum"></div>
+        <ul class="rules">
+          <li><b>Kesim:</b> yalnız CUT spot rengi (CMYK 0/100/100/0). CUT yoksa sayfa kenarından dikdörtgen kesilir.</li>
+          <li><b>Baskı:</b> CUT ve BLEED çizgileri her zaman gizlenir (çizgisiz baskı).</li>
+          <li><b>Yerleşim:</b> bleed'den bleed'e; şekiller serbest açıyla döndürülür, kesimler birbirini kesmez. Bleed'i doğrulanmayan dosyaya 4 mm boşluk verilir.</li>
+          <li><b>Sıralama:</b> en az fire veren dizilim otomatik seçilir. Folyo enini aşan işler bindirmesiz panellere bölünür.</li>
+          <li><b>Register:</b> her zaman eklenir — Qcut Platinum, çift başlangıç alt sağda.</li>
+        </ul>
+        <label class="f" style="margin-top:12px"><span>İş adı (dosya adına eklenir)</span><input type="text" data-k="jobName" placeholder="nest"></label>
       </section>
     </div>
 
@@ -286,7 +209,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <h2>Önizleme</h2>
           <span class="status" id="status">PDF bekleniyor</span>
           <div class="seg" id="segView" style="width:auto;flex:0 0 auto"><button data-v="print" class="on">Baskı</button><button data-v="cut">Kesim + register</button></div>
-          <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut" checked>Kesim çizgisi</label><input type="range" id="zoom" min="0" max="100" value="0"><span class="rev" id="zoomLbl">Sığdır</span></div>
+          <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut">Kesim çizgisini göster</label><input type="range" id="zoom" min="0" max="100" value="0"><span class="rev" id="zoomLbl">Sığdır</span></div>
         </div>
         <div class="sheets" id="sheets"></div>
         <div class="stage" id="stage"><div class="empty" id="empty"><b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.</div><canvas id="cv" class="hidden"></canvas></div>
@@ -304,6 +227,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
           <button class="btn" id="dlCut" disabled>Kesim PDF indir ↓</button>
           <button class="btn" id="dlCsv" disabled>Yerleşim raporu (CSV) ↓</button>
+          <button class="btn" id="dlDeck" disabled>Sunum indir (görsel onay) ↓</button>
         </div>
         <table class="tbl" id="tbl"></table>
       </section>
@@ -329,14 +253,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------------- ayarlar ---------------- */
 const DEFAULTS = {
-  media: 'roll', mediaW: 137, maxLen: 300, sheetH: 100, sideMargin: 10, headMargin: 15,
-  cutMode: 'shape', bleed: 3, cutSource: 'auto', hideLines: true,
-  gapMode: 'auto', gapUnverified: 3, gapManual: 2, rot90: true, rot180: true, res: 'auto', sort: 'area', opt: 'bal',
-  regOn: true, regProfile: 'qcut', regDia: 5, regEdge: 10, regClear: 3, regMaxGap: 500, regPair: 20, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 20
+  material: 'folyo-arkasi-gri', roll: 137, pay: 40, maxLen: 300, sideMargin: 10, headMargin: 10,
+  cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
+  regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
+  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0
 };
+const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio;
+// Ana site (engine.mjs) malzeme listesi: [kod, ad, rulo enleri cm, birim fiyat]
+const MATERIALS = [['folyo-arkasi-gri','Folyo baskı arkası gri',[105,126,137,152],164],['seffaf-folyo','Şeffaf folyo',[105],182],['kumlu-folyo-baski','Kumlu folyo baskı',[126,152],232],['kumlu-folyo-kesim','Kumlu folyo kesim',[126,152],211],['ultra-clear','Ultra Clear',[105],307],['cast-3m','3M Cast',[137],784],['yari-cast-3m','3M yarı Cast',[137],406],['reflektif','Reflektif',[126],354],['one-way-vision','One Way Vision',[105,152],177],['oracal-renk','Oracal renk folyosu',[126],250],['lumen-folyo','Lümen folyo',[126],647],['baskes-folyo','Baskes folyo',[105,126,137,152],230]];
+
 const LS = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
-let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings') || '{}')) };
+let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings.v3') || '{}')), ...FIXED };
 
 /* ---------------- durum ---------------- */
 const files = [];   // {id,name,size,bytes,doc(pdf-lib),js(pdf.js)}
@@ -468,7 +395,20 @@ function csFromObj(v, res, depth) {
   if (v instanceof PDFArray) {
     const kind = pdfNameStr(v.lookup(0));
     if (kind === 'ICCBased') { const s = v.lookup(1); const N = s && s.dict ? s.dict.lookup(nm('N')) : null; const nn = N instanceof PDFNumber ? N.asNumber() : 3; return { t: nn === 4 ? 'cmyk' : nn === 1 ? 'gray' : 'rgb' } }
-    if (kind === 'Separation') return { t: 'sep', name: pdfNameStr(v.lookup(1)) || '' };
+    if (kind === 'Separation') {
+      const info = { t: 'sep', name: pdfNameStr(v.lookup(1)) || '', alt: null, c0: null, c1: null };
+      try {
+        const alt = v.lookup(2); info.alt = alt instanceof PDFName ? alt.decodeText() : (alt instanceof PDFArray ? csFromObj(alt, res, depth + 1).t : null);
+        if (info.alt === 'cmyk') info.alt = 'DeviceCMYK'; if (info.alt === 'rgb') info.alt = 'DeviceRGB';
+        let fn = v.lookup(3); const fd = fn instanceof PDFDict ? fn : (fn && fn.dict) ? fn.dict : null;
+        const nums = k => { const a = fd && fd.lookup(nm(k)); return a instanceof PDFArray ? a.asArray().map(x => x instanceof PDFNumber ? x.asNumber() : 0) : null; };
+        if (fd) { info.c0 = nums('C0') || null; info.c1 = nums('C1') || null; if (info.c1 && !info.c0) info.c0 = info.c1.map(() => 0); }
+      } catch {}
+      // Illustrator "C=0 M=100 Y=100 K=0" biçimli adlar
+      const m = /C\s*=\s*([\d.]+)\s*M\s*=\s*([\d.]+)\s*Y\s*=\s*([\d.]+)\s*K\s*=\s*([\d.]+)/i.exec(info.name);
+      if (m && !info.c1) { info.alt = 'DeviceCMYK'; info.c0 = [0, 0, 0, 0]; info.c1 = m.slice(1, 5).map(x => +x / 100); }
+      return info;
+    }
     if (kind === 'DeviceN') { const a = v.lookup(1); const names = a instanceof PDFArray ? a.asArray().map(x => pdfNameStr(x) || '') : []; return { t: 'devn', names } }
     if (kind === 'CalRGB' || kind === 'Lab') return { t: 'rgb' };
     if (kind === 'CalGray') return { t: 'gray' };
@@ -482,21 +422,26 @@ function classify(gs, layers, src) {
   const lay = layers.filter(Boolean).join('|');
   if (lay) { if (RX_BLEED.test(lay)) return 'bleed'; if (RX_CUT.test(lay)) return 'cut'; }
   const cs = gs.scs, v = gs.sc || [];
-  if (cs.t === 'sep') { if (RX_BLEED.test(cs.name)) return 'bleed'; if (RX_CUT.test(cs.name) && (v[0] ?? 1) > 0.05) return src === 'red' ? null : 'cut'; return null }
-  if (cs.t === 'devn') { if (cs.names.some((nmx, i) => RX_CUT.test(nmx) && (v[i] ?? 0) > 0.05)) return src === 'red' ? null : 'cut'; return null }
-  if (src === 'layer') return null;
+  if (cs.t === 'sep') {
+    if (RX_BLEED.test(cs.name)) return 'bleed'; if (RX_CUT.test(cs.name) && (v[0] ?? 1) > 0.05) return 'cut';
+    // spot rengin gerçek karşılığı: alt = C0 + tint·(C1 − C0)
+    if (cs.c1 && (cs.alt === 'DeviceCMYK' || cs.alt === 'DeviceRGB')) {
+      const t = v[0] ?? 1; const vals = cs.c1.map((c, i) => (cs.c0[i] || 0) + t * (c - (cs.c0[i] || 0)));
+      return classify({ scs: { t: cs.alt === 'DeviceCMYK' ? 'cmyk' : 'rgb' }, sc: vals }, [], src);
+    }
+    return null;
+  }
+  if (cs.t === 'devn') { if (cs.names.some((nmx, i) => RX_CUT.test(nmx) && (v[i] ?? 0) > 0.05)) return 'cut'; return null }
   let r, g, b;
   if (cs.t === 'cmyk' && v.length >= 4) {
     const [C, M, Y, K] = v;
-    if (C < 0.15 && K < 0.15 && M > 0.85 && Y > 0.85) return src === 'magenta' ? null : 'cut';
-    if (C < 0.15 && K < 0.15 && M > 0.85 && Y < 0.15) return src === 'red' ? null : 'cut';
+    if (C < 0.15 && K < 0.15 && M > 0.85 && Y > 0.85) return 'cut';
     if (C < 0.15 && K < 0.15 && M > 0.3 && M < 0.7 && Y > 0.3 && Y < 0.7) return 'bleed';
     return null;
   }
   if (cs.t === 'rgb' && v.length >= 3) { [r, g, b] = v; }
   else return null;
-  if (r > 0.85 && g < 0.25 && b < 0.25) return src === 'magenta' ? null : 'cut';
-  if (r > 0.85 && g < 0.25 && b > 0.75) return src === 'red' ? null : 'cut';
+  if (r > 0.85 && g < 0.25 && b < 0.25) return 'cut';
   if (r > 0.85 && g > 0.35 && g < 0.75 && b > 0.35 && b < 0.75 && Math.abs(g - b) < 0.15) return 'bleed';
   return null;
 }
@@ -688,11 +633,9 @@ async function addFiles(list) {
 }
 async function loadPdf(name, bytes, size, qtys) {
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
-  let js = null;
-  try { js = await pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise; } catch (e) { console.warn('pdf.js', e); }
-  const file = { id: ++uid, name, size: size || bytes.length, doc, js };
+  const file = { id: ++uid, name, size: size || bytes.length, doc, js: null };
   files.push(file);
-  const pages = doc.getPages();
+  const pages = doc.getPages(); const its = [];
   for (let i = 0; i < pages.length; i++) {
     const page = pages[i];
     const cb = page.getCropBox(), mb = page.getMediaBox();
@@ -701,12 +644,21 @@ async function loadPdf(name, bytes, size, qtys) {
     const it = { id: ++uid, file, pageIndex: i, page, name: pages.length > 1 ? `${name} · s.${i + 1}` : name, pageBox: crop, trimBox: trim,
       qty: qtys ? (qtys[i] || 1) : 1, scale: (S.gRatio || 1) * 100, rotate: true, an: null, geom: null, thumb: null };
     it.an = safeAnalyze(it);
-    items.push(it);
-    await renderThumb(it);
+    its.push(it);
   }
+  // önizleme ve sunum için CUT/BLEED çizgileri çıkarılmış kopya
+  let viewBytes = bytes;
+  if (its.some(it => it.an.rewrites.length)) {
+    try { for (const it of its) setRewrites(it, true); viewBytes = await doc.save({ useObjectStreams: false, updateFieldAppearances: false }); }
+    catch (e) { console.warn('temiz kopya', e); viewBytes = bytes; }
+    finally { for (const it of its) setRewrites(it, false); }
+  }
+  try { file.js = await pdfjsLib.getDocument({ data: viewBytes.slice(), isEvalSupported: false }).promise; }
+  catch (e) { console.warn('pdf.js', e); try { file.js = await pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise; } catch {} }
+  for (const it of its) { items.push(it); await renderThumb(it); }
 }
 function safeAnalyze(it) {
-  try { return analyzePage(it.file.doc, it.page, S.cutSource) }
+  try { return analyzePage(it.file.doc, it.page, 'cut') }
   catch (e) { console.warn('analiz', e); return { cut: [], bleed: [], rewrites: [], err: String(e) } }
 }
 async function renderThumb(it) {
@@ -770,11 +722,23 @@ function computeGeom(it) {
   g.masks = {};
   it.geom = g; return g;
 }
-function placeMatrix(it, rot, Xpt, Ypt) {
-  const g = it.geom;
-  return Mx.mul(Mx.mul(Mx.mul(Mx.tr(-g.frame[0], -g.frame[1]), Mx.sc(g.s)), Mx.rot(rot, g.wPt, g.hPt)), Mx.tr(Xpt, Ypt));
+function hullPts(g) {
+  if (g._pts) return g._pts;
+  const cr = g.clipRect, cl = (x, y) => [Math.min(cr[2], Math.max(cr[0], x)), Math.min(cr[3], Math.max(cr[1], y))];
+  let pts = g.poly ? g.poly.flat().map(p => cl(p[0], p[1])) : [[g.frame[0], g.frame[1]], [g.frame[2], g.frame[1]], [g.frame[2], g.frame[3]], [g.frame[0], g.frame[3]]];
+  if (pts.length > 400) { const st = Math.ceil(pts.length / 400); pts = pts.filter((_, i) => i % st === 0); }
+  return g._pts = pts;
 }
-function rotDims(g, rot) { return (rot === 90 || rot === 270) ? [g.wMm, g.hMm].reverse() : [g.wMm, g.hMm] }
+function rotInfo(g, rot) {
+  g._rot = g._rot || {}; if (g._rot[rot]) return g._rot[rot];
+  const a = rot * Math.PI / 180, c = Math.round(Math.cos(a) * 1e12) / 1e12, sn = Math.round(Math.sin(a) * 1e12) / 1e12;
+  const base = Mx.mul(Mx.mul(Mx.tr(-g.frame[0], -g.frame[1]), Mx.sc(g.s)), [c, sn, -sn, c, 0, 0]);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of hullPts(g)) { const q = Mx.ap(base, x, y); if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; }
+  return g._rot[rot] = { m: Mx.mul(base, Mx.tr(-x0, -y0)), w: x1 - x0, h: y1 - y0 };
+}
+function placeMatrix(it, rot, Xpt, Ypt) { return Mx.mul(rotInfo(it.geom, rot).m, Mx.tr(Xpt, Ypt)); }
+function rotDims(g, rot) { const r = rotInfo(g, rot); return [r.w / PT, r.h / PT]; }
 
 /* ---------------- maske (şekil yerleşimi) ---------------- */
 function getMask(it, rot, res) {
@@ -814,16 +778,30 @@ function getMask(it, rot, res) {
 
 /* ---------------- nest ---------------- */
 function rotationsFor(it) {
-  const r = [0]; if (S.rot180) r.push(180);
-  if (S.rot90 && it.rotate) { r.push(90); if (S.rot180) r.push(270); }
-  return r;
+  const g = it.geom; if (g._angles) return g._angles;
+  if (!g.poly) return g._angles = [0, 90];
+  let best = 0, ba = Infinity;
+  for (let a = 0; a < 90; a += 3) { const r = rotInfo(g, a); const A = r.w * r.h; if (A < ba - 1e-6) { ba = A; best = a } }
+  const set = new Set([0, 90, 180, 270, best, best + 90, best + 180, best + 270].map(a => ((a % 360) + 360) % 360));
+  return g._angles = [...set];
 }
-function mediaDims() {
-  const regZone = S.regOn ? S.regEdge + S.regDia / 2 + S.regClear : 0;
+function curMat() { return MATERIALS.find(m => m[0] === S.material) || MATERIALS[0] }
+function mediaDims(roll = S.roll) {
+  const regZone = S.regEdge + S.regDia / 2 + S.regClear;
   const side = Math.max(S.sideMargin, regZone), head = Math.max(S.headMargin, regZone);
-  const W = S.mediaW * 10, usableW = W - 2 * side;
-  const L = S.media === 'roll' ? S.maxLen * 10 : S.sheetH * 10;
-  return { W, side, head, usableW, maxUsableL: L - 2 * head, L };
+  const W = roll * 10 - S.pay, usableW = W - 2 * side, L = S.maxLen * 10;
+  return { W, side, head, usableW, maxUsableL: L - 2 * head, L, roll: true, rollCm: roll };
+}
+function renderMedia() {
+  const f = v => (v / 10).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+  const cmp = layout && layout.cmp || [];
+  const sel = layout ? layout.md.rollCm : null; const nf = (v, d = 2) => v.toLocaleString('tr-TR', { maximumFractionDigits: d });
+  $('#rollCmp').innerHTML = `<table class="cmpT"><tr><th>Folyo eni</th><th>Baskı eni</th><th>Boy</th><th>Folyo</th><th></th></tr>` + curMat()[2].map(w => {
+    const c = cmp.find(x => x.w === w);
+    return `<tr class="${sel === w ? 'sel' : ''}"><td>${w} cm</td><td>${f(w * 10 - S.pay)} cm</td><td>${c ? (c.ok ? nf(c.len / 1000) + ' m' : 'sığmıyor') : '–'}</td><td>${c && c.ok ? nf(c.m2) + ' m²' : '–'}</td><td>${sel === w ? '✓ seçildi' : ''}</td></tr>`;
+  }).join('') + `</table>`;
+  const md = layout ? layout.md : mediaDims();
+  $('#prodSum').innerHTML = `${layout ? 'Seçilen rulo' : 'Varsayılan rulo'} <b>${md.rollCm} cm</b> → baskı eni <b>${f(md.W)} cm</b> (4 cm makine payı) · yerleşim eni <b>${f(md.usableW)} cm</b><br>Kenar payı ${f(md.side)} cm · sayfa boyu en fazla <b>${f(md.L)} cm</b>${layout ? ' · en az folyo harcayan en seçildi' : ''}`;
 }
 function sortInst(inst, mode) {
   const a = inst.slice();
@@ -836,7 +814,7 @@ function buildInstances(warns, md) {
   items.forEach((it, idx) => {
     const g = computeGeom(it);
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
-    if (S.cutMode === 'shape' && g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: kesim çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
+    if (g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: CUT çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
     if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
     const parts = panelize(it, g, md, warns);
     for (let q = 0; q < it.qty; q++) for (const pt of parts) inst.push({ it: pt, idx, q });
@@ -849,10 +827,9 @@ function fitsMedia(wMm, hMm, gap, md, rot) {
   return a || b;
 }
 function panelize(it, g, md, warns) {
-  const rot = S.rot90 && it.rotate;
+  const rot = true;
   if (fitsMedia(g.wMm, g.hMm, g.gap, md, rot)) return [it];
-  if (!S.panelOn) { warns.push(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmıyor (panel bölme kapalı).`); return [it]; }
-  const ov = Math.max(0, S.overlap || 0), safe = 3;
+  const ov = 0, safe = 3;
   const UW = md.usableW - g.gap - safe, ML = md.maxUsableL - g.gap - safe;
   if (UW <= ov + 10 || ML <= ov + 10) { warns.push(`${it.name}: medya bölme için çok dar.`); return [it]; }
   const plan = (W, H, across) => {
@@ -881,7 +858,7 @@ function panelize(it, g, md, warns) {
     pg.wPt = (r[2] - r[0]) * g.s; pg.hPt = (r[3] - r[1]) * g.s; pg.wMm = pg.wPt / PT; pg.hMm = pg.hPt / PT; pg.area = pg.wPt * pg.hPt; pg.areaMm = pg.wMm * pg.hMm;
     pt.geom = pg; parts.push(pt);
   }
-  warns.unshift(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmadı → ${parts.length} panele bölündü (${nxPage}×${nyPage}, ${ov} mm bindirme, panel ${fmtCm(parts[0].geom.wMm)} × ${fmtCm(parts[0].geom.hMm)} cm).`);
+  warns.unshift(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmadı → ${parts.length} panele bölündü (${nxPage}×${nyPage}, panel ${fmtCm(parts[0].geom.wMm)} × ${fmtCm(parts[0].geom.hMm)} cm).`);
   return parts;
 }
 const SCORES = { top: (tp, y, x) => tp + x * 1e-7, mix: (tp, y, x) => tp * 0.7 + y * 0.3 + x * 1e-7, center: (tp, y, x) => (tp + y) / 2 + x * 1e-7 };
@@ -922,11 +899,11 @@ function insertRun(col, s, e) {
   col.splice(i, j - i, ns, ne);
 }
 async function nestShapes(inst, md, token, prog, SCORE = SCORES.top, fixedRes) {
-  let res = fixedRes || (S.res === 'auto' ? null : +S.res);
+  let res = fixedRes;
   if (!res) {
     const avgW = inst.reduce((s, i) => s + Math.max(i.it.geom.wMm, i.it.geom.hMm), 0) / Math.max(1, inst.length);
-    const rots = (S.rot90 ? 2 : 1) * (S.rot180 ? 2 : 1);
-    for (const r of [0.5, 1, 2, 3, 4, 6]) { const ops = inst.length * rots * (md.usableW / r) * (avgW / r) * 2.5; res = r; if (ops < 2.5e8) break; }
+    const rots = inst.reduce((a, i) => a + rotationsFor(i.it).length, 0) / Math.max(1, inst.length);
+    for (const r of [0.5, 1, 2, 3, 4, 6]) { const ops = inst.length * rots * (md.usableW / r) * (avgW / r) * 2.5; res = r; if (ops < 7e7) break; }
   }
   const Wc = Math.floor(md.usableW / res), Lc = Math.floor(md.maxUsableL / res);
   const sheets = []; const unplaced = []; let t0 = performance.now();
@@ -959,47 +936,7 @@ async function nestShapes(inst, md, token, prog, SCORE = SCORES.top, fixedRes) {
   }
   return { sheets: sheets.filter(s => s.pl.length).map(s => ({ pl: s.pl, usedL: Math.max(...s.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1] + p.it.geom.gap / 2), 0) })), unplaced, res };
 }
-async function nestRects(inst, md, token, prog, heur) {
-  const gMax = Math.max(0, ...inst.map(i => i.it.geom.gap));
-  const BW = md.usableW + gMax, BH = md.maxUsableL + gMax;
-  const roll = heur ? heur === 'bl' : S.media === 'roll';
-  const bins = []; const unplaced = []; let t0 = performance.now();
-  const newBin = () => ({ free: [{ x: 0, y: 0, w: BW, h: BH }], pl: [] });
-  function find(bin, it) {
-    const g = it.geom; let best = null;
-    for (const r of rotationsFor(it).filter(r => r === 0 || r === 90)) {
-      const [w, h] = rotDims(g, r); const pw = w + g.gap, ph = h + g.gap;
-      for (const f of bin.free) {
-        if (pw > f.w + 1e-6 || ph > f.h + 1e-6) continue;
-        if (f.x + w > md.usableW + 1e-6 || f.y + h > md.maxUsableL + 1e-6) continue;
-        const s1 = roll ? f.y + ph : Math.min(f.w - pw, f.h - ph), s2 = roll ? f.x : Math.max(f.w - pw, f.h - ph);
-        if (!best || s1 < best.s1 - 1e-6 || (Math.abs(s1 - best.s1) < 1e-6 && s2 < best.s2)) best = { s1, s2, x: f.x, y: f.y, w: pw, h: ph, r };
-      }
-    }
-    return best;
-  }
-  function place(bin, p) {
-    const nf = [];
-    for (const f of bin.free) {
-      if (p.x >= f.x + f.w || p.x + p.w <= f.x || p.y >= f.y + f.h || p.y + p.h <= f.y) { nf.push(f); continue }
-      if (p.x > f.x) nf.push({ x: f.x, y: f.y, w: p.x - f.x, h: f.h });
-      if (p.x + p.w < f.x + f.w) nf.push({ x: p.x + p.w, y: f.y, w: f.x + f.w - p.x - p.w, h: f.h });
-      if (p.y > f.y) nf.push({ x: f.x, y: f.y, w: f.w, h: p.y - f.y });
-      if (p.y + p.h < f.y + f.h) nf.push({ x: f.x, y: p.y + p.h, w: f.w, h: f.y + f.h - p.y - p.h });
-    }
-    bin.free = nf.filter((a, i) => !nf.some((b, j) => j !== i && a.x >= b.x - 1e-9 && a.y >= b.y - 1e-9 && a.x + a.w <= b.x + b.w + 1e-9 && a.y + a.h <= b.y + b.h + 1e-9 && (j < i || !(a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h))));
-  }
-  for (let n = 0; n < inst.length; n++) {
-    if (token !== nestToken) return null;
-    if (performance.now() - t0 > 40) { prog(n / inst.length); await sleep(0); t0 = performance.now(); }
-    const { it } = inst[n]; let done = false;
-    for (const bin of bins) { const p = find(bin, it); if (p) { place(bin, p); bin.pl.push({ it, rot: p.r, x: p.x, y: p.y }); done = true; break } }
-    if (!done) { const bin = newBin(); const p = find(bin, it); if (p) { place(bin, p); bin.pl.push({ it, rot: p.r, x: p.x, y: p.y }); bins.push(bin); } else unplaced.push(inst[n]); }
-  }
-  return { sheets: bins.map(b => ({ pl: b.pl, usedL: Math.max(...b.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1]), 0) })), unplaced, res: 0 };
-}
 function regMarks(W, L) {
-  if (!S.regOn) return [];
   const e = S.regEdge, marks = [];
   const bottomFeed = S.feed[0] === 'B', rightFeed = S.feed[1] === 'R';
   const y0 = e, y1 = L - e; const span = y1 - y0;
@@ -1020,33 +957,33 @@ async function runNest() {
   if (!items.length) { layout = null; renderAll(); setStatus('PDF bekleniyor'); return }
   setStatus('Yerleşim hesaplanıyor…', 'busy'); showBar(0);
   await sleep(10);
-  const warns = [];
-  const md = mediaDims();
-  if (md.usableW <= 10) { setStatus('Medya eni kenar paylarından küçük', 'err'); return }
-  const inst = buildInstances(warns, md);
   const t = performance.now();
-  const shape = S.cutMode === 'shape';
-  const sorts = S.sort === 'order' ? ['order'] : [S.sort, ...['area', 'long', 'perim', 'short'].filter(x => x !== S.sort)];
-  const tries = S.opt === 'fast' ? 1 : S.opt === 'deep' ? 8 : 4;
-  const variants = [];
-  const hs = shape ? ['top', 'mix', 'center'] : ['bl', 'bssf'];
-  for (let i = 0; variants.length < tries && i < 12; i++) variants.push({ sort: sorts[i % sorts.length], h: hs[Math.floor(i / sorts.length) % hs.length] });
-  if (!shape && S.media === 'sheet') variants.forEach(v => v.h = v.h === 'bl' ? 'bssf' : 'bl');
-  let r = null, fixedRes = null;
-  for (let vi = 0; vi < variants.length; vi++) {
-    const v = variants[vi];
-    const pr = x => showBar((vi + x) / variants.length);
-    const rr = shape ? await nestShapes(sortInst(inst, v.sort), md, token, pr, SCORES[v.h], fixedRes) : await nestRects(sortInst(inst, v.sort), md, token, pr, v.h);
-    if (!rr) return;
-    fixedRes = rr.res || null;
-    const cost = rr.unplaced.length * 1e9 + rr.sheets.length * 1e6 + rr.sheets.reduce((a, s) => a + s.usedL, 0);
-    rr.cost = cost; rr.variant = v;
-    if (!r || cost < r.cost - 1e-6) r = rr;
-    if (token !== nestToken) return;
+  const widths = curMat()[2];
+  const runs = [];
+  let fixedRes = null, step = 0; const totalSteps = widths.length + 3;
+  const one = async (w, sort, h) => {
+    const warns = []; const md = mediaDims(w);
+    const inst = buildInstances(warns, md);
+    const rr = await nestShapes(sortInst(inst, sort), md, token, x => showBar((step + x) / totalSteps), SCORES[h], fixedRes);
+    step++;
+    if (!rr) return null;
+    fixedRes = fixedRes || rr.res;
+    const len = rr.sheets.reduce((a, s) => a + s.usedL + 2 * md.head, 0);
+    rr.md = md; rr.warns = warns; rr.inst = inst; rr.len = len; rr.m2 = w / 100 * len / 1000;
+    rr.cost = rr.unplaced.length * 1e9 + rr.m2 * 1e3 + rr.sheets.length;
+    return rr;
+  };
+  for (const w of widths) { const rr = await one(w, 'area', 'top'); if (!rr) return; runs.push(rr); }
+  let r = runs.reduce((a, b) => (b.cost < a.cost ? b : a));
+  for (const [sort, h] of [['long', 'top'], ['perim', 'mix'], ['area', 'center']]) {
+    const rr = await one(r.md.rollCm, sort, h); if (!rr) return;
+    if (rr.cost < r.cost - 1e-6) r = rr;
   }
+  const cmp = widths.map(w => { const x = runs.find(q => q.md.rollCm === w); return { w, ok: x && !x.unplaced.length, len: x ? x.len : 0, m2: x ? x.m2 : 0 } });
+  const md = r.md, warns = r.warns, inst = r.inst;
   // sayfaları oluştur
   const sheets = r.sheets.map((s, i) => {
-    const L = S.media === 'roll' ? Math.ceil(s.usedL + 2 * md.head) : md.L;
+    const L = Math.ceil(s.usedL + 2 * md.head);
     const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.head + p.y }));
     if (S.feed[0] === 'T') { // besleme üstten: düzeni 180° çevir
       for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = md.W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
@@ -1057,16 +994,16 @@ async function runNest() {
     const names = [...new Set(r.unplaced.map(u => u.it.name))];
     warns.unshift(`${r.unplaced.length} adet yerleşmedi (medyadan büyük): ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}`);
   }
-  layout = { sheets, warns: [...new Set(warns)], res: r.res, md, ms: performance.now() - t, rev: null, sig: settingsSig() };
+  layout = { sheets, warns: [...new Set(warns)], res: r.res, md, cmp, ms: performance.now() - t, rev: null, sig: settingsSig() };
   if (curSheet >= sheets.length) curSheet = 0;
   showBar(-1); setStatus(`${sheets.length} sayfa · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
-  renderAll();
+  renderAll(); renderMedia();
 }
 function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
 
 /* ---------------- önizleme ---------------- */
 let zoomPx = 0;
-function renderAll() { renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv'].forEach(s => $(s).disabled = !ok); }
+function renderAll() { renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
 function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
@@ -1090,8 +1027,10 @@ function renderPreview() {
   const k = z * dpr; // piksel / mm
   cv.width = Math.max(1, Math.round(sh.W * k)); cv.height = Math.max(1, Math.round(sh.L * k));
   cv.style.width = (sh.W * z) + 'px'; cv.style.height = (sh.L * z) + 'px';
-  const c = cv.getContext('2d');
-  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+  drawSheet(cv.getContext('2d'), sh, k, view, $('#showCut').checked, dpr);
+}
+function drawSheet(c, sh, k, view, showCut, dpr = 1) {
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, Math.round(sh.W * k), Math.round(sh.L * k));
   const F = [k / PT, 0, 0, -k / PT, 0, sh.L * k]; // sayfa-pt -> kanvas
   const md = layout.md;
   // kullanılabilir alan
@@ -1109,7 +1048,7 @@ function renderPreview() {
       const T = Mx.mul(G, MF); c.setTransform(T[0], T[1], T[2], T[3], T[4], T[5]);
       c.drawImage(th.cv, 0, 0); c.restore();
     }
-    if (view === 'cut' || $('#showCut').checked) {
+    if (view === 'cut' || showCut) {
       c.save(); c.strokeStyle = view === 'cut' ? '#e00000' : 'rgba(255,0,0,.9)'; c.lineWidth = Math.max(1, 0.35 * k * 0.6);
       c.stroke(path2d(g.cut, MF)); c.restore();
     }
@@ -1164,7 +1103,7 @@ function renderTable() {
   const rows = new Map();
   layout.sheets.forEach((s, si) => s.pl.forEach(p => { const k = p.it.id; const r = rows.get(k) || { it: p.it, n: 0, pn: 0, sheets: new Set() }; if (!p.it.panel || p.it.panel.k === 1) r.n++; if (p.it.panel) r.pn = p.it.panel.n; r.sheets.add(si + 1); rows.set(k, r); }));
   t.innerHTML = '<tr><th>İş</th><th>Ölçü (cm)</th><th>Kesim</th><th>Adet</th><th>Sayfa</th></tr>' +
-    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? fmtCm(g.wMm) + ' × ' + fmtCm(g.hMm) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}${r && r.pn ? ` · ${r.pn} panel` : ''}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
+    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? (() => { const cb = subsBBox(g.cut); return fmtCm((cb[2] - cb[0]) * g.s / PT) + ' × ' + fmtCm((cb[3] - cb[1]) * g.s / PT) })() : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}${r && r.pn ? ` · ${r.pn} panel` : ''}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -1252,7 +1191,7 @@ async function buildPrintPdf() {
   const used = [...new Set(layout.sheets.flatMap(s => s.pl.map(p => p.it)))];
   const emb = new Map();
   // CUT/BLEED çizgilerini geçici olarak gizle → sayfayı göm → geri al
-  for (const it of used) if (S.hideLines) setRewrites(it, true);
+  for (const it of used) setRewrites(it, true);
   try {
     for (const it of used) {
       const g = it.geom; const bb = g.clipRect;
@@ -1321,6 +1260,68 @@ $('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = a
 $('#dlCut').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); });
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
 
+/* ---------------- sunum: müşteriye görsel onay paftası ---------------- */
+// Ana sitenin "Görsel Onay" paftasıyla aynı düzen: A4 yatay, REVO logosu, filigranlı vektör görsel, kesim ölçüsü / adet / tarih.
+const DECK = {
+  title: 'GÖRSEL ONAY', note: 'Yalnizca görsel onay içindir. Üretim dosyasi olarak kullanilamaz.',
+  docTitle: 'REVO - Gorsel Onay', author: 'REVO', subject: 'Yuklenen PDF sayfalari / filigranli musteri onayi',
+  wmOpacity: 0.1, wmScale: 0.4048513543650181, wmAngle: 27, wmDx: 178, wmDy: 86, wmShift: 56
+};
+const REVO_LOGO_B64 = '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';
+const winAnsi = t => String(t).replace(/ı/g, 'i').replace(/İ/g, 'I').replace(/ş/g, 's').replace(/Ş/g, 'S').replace(/ğ/g, 'g').replace(/Ğ/g, 'G');
+async function buildDeckPdf() {
+  ensureRev();
+  const out = await PDFDocument.create();
+  out.setTitle(DECK.docTitle); out.setAuthor(DECK.author); out.setSubject(DECK.subject); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
+  const logoBytes = Uint8Array.from(atob(REVO_LOGO_B64), c => c.charCodeAt(0));
+  const [logo] = await out.embedPdf(logoBytes, [0]);
+  const fB = await out.embedFont(StandardFonts.HelveticaBold), fR = await out.embedFont(StandardFonts.Helvetica);
+  const ink = P.rgb(0.1, 0.15, 0.19), mute = P.rgb(0.45, 0.49, 0.52), rule = P.rgb(0.85, 0.87, 0.88);
+  const list = items.filter(it => it.qty > 0);
+  // görselleri çizgisiz, kesim ölçüsünde vektör olarak göm
+  const emb = new Map();
+  for (const it of list) setRewrites(it, true);
+  try {
+    for (const it of list) { const cb = bbInter(subsBBox(it.geom.cut), it.pageBox); emb.set(it, { e: await out.embedPage(it.page, { left: cb[0], bottom: cb[1], right: cb[2], top: cb[3] }, [1, 0, 0, 1, 0, 0]), cb }); }
+  } finally { for (const it of list) setRewrites(it, false); }
+  const n = list.length, d = new Date(), dateTxt = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+  list.forEach((it, i) => {
+    const pg = out.addPage([841.89, 595.28]); const g = it.geom; const { e, cb } = emb.get(it);
+    // başlık
+    pg.drawPage(logo, { x: 46, y: 519, xScale: 0.5420891016073972, yScale: 0.5420891016073972 });
+    pg.drawText(winAnsi(DECK.title), { x: 615, y: 548, size: 12, font: fB, color: ink });
+    pg.drawText(`PAFTA ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, { x: 615, y: 531, size: 10, font: fR, color: mute });
+    pg.drawLine({ start: { x: 46, y: 506 }, end: { x: 796, y: 506 }, thickness: 0.7, color: rule });
+    // görsel alanı
+    const bx = 62, by = 151, bw = 718, bh = 331;
+    const k = Math.min(bw / (cb[2] - cb[0]), bh / (cb[3] - cb[1]));
+    const aw = (cb[2] - cb[0]) * k, ah = (cb[3] - cb[1]) * k, ax = bx + (bw - aw) / 2, ay = by + (bh - ah) / 2;
+    const xn = pg.node.newXObject('Art', e.ref);
+    const M = [k, 0, 0, k, ax - cb[0] * k, ay - cb[1] * k];
+    const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
+    if (g.mode === 'shape') ops.push(...subsOps(g.cut), clip(), endPath());
+    ops.push(drawObject(xn), popGraphicsState());
+    pg.pushOperators(...ops);
+    // filigran (görsel alanına kırpılı)
+    pg.pushOperators(pushGraphicsState(), P.rectangle(ax, ay, aw, ah), clip(), endPath());
+    for (let j = -1, y = ay - DECK.wmDy; y < ay + ah; j++, y += DECK.wmDy) {
+      for (let x = ax - DECK.wmDx + (j % 2 ? DECK.wmShift : 0); x < ax + aw; x += DECK.wmDx)
+        pg.drawPage(logo, { x, y, xScale: DECK.wmScale, yScale: DECK.wmScale, rotate: P.degrees(DECK.wmAngle), opacity: DECK.wmOpacity });
+    }
+    pg.pushOperators(popGraphicsState());
+    pg.drawRectangle({ x: 46, y: 137, width: 750, height: 359, borderColor: rule, borderWidth: 0.5 });
+    // alt bilgi
+    pg.drawLine({ start: { x: 46, y: 120 }, end: { x: 796, y: 120 }, thickness: 0.7, color: rule });
+    const wCm = (cb[2] - cb[0]) * g.s / PT / 10, hCm = (cb[3] - cb[1]) * g.s / PT / 10;
+    const col = (x, label, val) => { pg.drawText(label, { x, y: 103, size: 7, font: fB, color: mute }); pg.drawText(val, { x, y: 85, size: 10, font: fR, color: ink }); };
+    col(454, 'KESIM ÖLÇÜSÜ / cm', `${wCm.toFixed(2)} × ${hCm.toFixed(2)}`); col(600, 'ADET', String(it.qty)); col(678, 'TARIH', dateTxt);
+    pg.drawText(winAnsi(DECK.note), { x: 46, y: 49, size: 9, font: fR, color: mute });
+    pg.drawPage(logo, { x: 752, y: 43, xScale: 0.15096152196661694, yScale: 0.15096152196661694 });
+  });
+  return out.save();
+}
+$('#dlDeck').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildDeckPdf(); await saveFile(`${fileBase()}_GORSEL-ONAY.pdf`, b, 'application/pdf'); });
+
 /* ---------------- örnek iş ---------------- */
 async function samplePdf() {
   const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.HelveticaBold);
@@ -1383,14 +1384,9 @@ function bindSettings() {
     if (el.type === 'checkbox') el.checked = !!S[k]; else el.value = S[k];
     el.onchange = () => {
       S[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (+el.value || 0) : el.value;
-      if (k === 'cutSource') { for (const it of items) { it.an = safeAnalyze(it); it.geom = null; } }
-      if (['cutMode', 'bleed', 'cutSource', 'gapMode', 'gapUnverified', 'gapManual'].includes(k)) renderItems();
-      scheduleNest();
+      if (k !== 'jobName') scheduleNest();
     };
   });
-  segInit('#segMedia', 'media', () => { $$('[data-show]').forEach(e => e.classList.toggle('hidden', e.dataset.show !== S.media)); scheduleNest() });
-  segInit('#segCut', 'cutMode', () => { renderItems(); scheduleNest() });
-  $$('[data-show]').forEach(e => e.classList.toggle('hidden', e.dataset.show !== S.media));
 }
 function segInit(sel, key, cb) {
   const el = $(sel); el.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === S[key]); b.onclick = () => { S[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); cb() } });
@@ -1398,10 +1394,6 @@ function segInit(sel, key, cb) {
 $('#segView').querySelectorAll('button').forEach(b => b.onclick = () => { view = b.dataset.v; $('#segView').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderPreview() });
 $('#zoom').oninput = renderPreview; $('#showCut').onchange = renderPreview;
 let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(renderPreview, 150) });
-$('#btnSaveSet').onclick = () => { LS.set('nest.settings', JSON.stringify(S)); toast('Ayarlar bu tarayıcıya kaydedildi') };
-$('#btnExportSet').onclick = () => saveFile('nest-ayarlar.json', JSON.stringify(S, null, 2), 'application/json');
-$('#btnResetSet').onclick = () => { S = { ...DEFAULTS }; bindSettings(); for (const it of items) { it.an = safeAnalyze(it); it.geom = null } renderItems(); scheduleNest() };
-$('#setIn').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); S = { ...DEFAULTS, ...o }; bindSettings(); for (const it of items) { it.an = safeAnalyze(it); it.geom = null } renderItems(); scheduleNest(); toast('Ayarlar içe aktarıldı') } catch { toast('Ayar dosyası okunamadı') } e.target.value = '' };
 
 function setStatus(t, cls = '') { const s = $('#status'); s.textContent = t; s.className = 'status ' + cls; }
 function showBar(v) { const b = $('#bar'); if (v < 0) { b.style.display = 'none'; return } b.style.display = 'block'; b.firstElementChild.style.width = (v * 100).toFixed(0) + '%'; }
@@ -1409,8 +1401,8 @@ let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.c
 
 function syncG() { $$('#gRatio button').forEach(b => b.classList.toggle('on', +b.dataset.g === (S.gRatio || 1))); }
 $$('#gRatio button').forEach(b => b.onclick = () => { S.gRatio = +b.dataset.g; syncG(); for (const it of items) it.scale = S.gRatio * 100; renderItems(); scheduleNest(100); toast(S.gRatio === 10 ? 'Tüm dosyalar 10 kat büyütüldü (1:10)' : 'Tüm dosyalar gerçek ölçüde (1:1)'); });
-syncG(); bindSettings(); updateRevLbl();
-window.__nest = { offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
+syncG(); bindSettings(); renderMedia(); updateRevLbl();
+window.__nest = { buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
 </script>
 </body>
 </html>
