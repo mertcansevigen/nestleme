@@ -66,6 +66,12 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .gscale{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 12px}
 .gscale b{display:block;font-size:13px}.gscale small{color:var(--muted);font-size:11.5px}
 .gscale .rt button{font-size:13px;padding:7px 14px}
+.gscale.dup .rt button.on[data-d="1"]{background:rgba(255,45,45,.15);color:#fff;box-shadow:inset 0 0 0 1px var(--cut)}
+.item.back{opacity:.8;border-style:dashed}
+.item .bk{font:600 11px Inter;color:#ffb4b4;margin-top:3px}
+.item .brow{grid-column:2/-1;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.item .brow select{flex:1;min-width:0;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-size:12px}
+.gscale .rt button{white-space:nowrap}
 .rt{display:flex;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:2px;gap:2px}
 .rt button{border:none;background:none;color:var(--muted);font:600 12px var(--mono);padding:6px 9px;border-radius:6px;cursor:pointer}
 .rt button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
@@ -183,6 +189,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
+        <div class="gscale dup"><div><b>Çift Yüz · foreks</b><small>Ön + arka yüz folyosu; arka yerleşim aynalı, plaka tek kesim</small></div><div class="rt" id="dupSel"><button data-d="0">Kapalı</button><button data-d="1">Çift Yüz</button></div></div>
         <div class="gscale"><div><b>Tüm dosyaların ölçeği</b><small>1:10 seçilirse yüklenen her şey 10 kat büyütülür</small></div><div class="rt" id="gRatio"><button data-g="1">1:1</button><button data-g="10">1:10</button></div></div>
         <label class="drop" id="drop">
           <input type="file" id="fileIn" accept=".pdf,.ai,application/pdf,application/postscript,application/illustrator" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
@@ -208,6 +215,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <li><b>Yerleşim:</b> bleed'den bleed'e; şekiller serbest açıyla döndürülür, kesimler birbirini kesmez. Bleed'i doğrulanmayan dosyaya 4 mm boşluk verilir.</li>
           <li><b>Sıralama:</b> en az fire veren dizilim otomatik seçilir. Folyo enini aşan işler bindirmesiz panellere bölünür.</li>
           <li><b>Register:</b> her zaman eklenir — Qcut Platinum, çift başlangıç alt sağda.</li>
+          <li><b>Çift Yüz (foreks):</b> ön yerleşim folyo baskı alanına yapılır; arka folyo aynı alanın yatay aynası (görsel düz okunur), plaka ön yüzden tek kesim. Folyo 2 yüz hesaplanır.</li>
         </ul>
         <label class="f" style="margin-top:12px"><span>İş adı (dosya adına eklenir)</span><input type="text" data-k="jobName" placeholder="nest"></label>
       </section>
@@ -218,7 +226,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <div class="pv-head">
           <h2>Önizleme</h2>
           <span class="status" id="status">PDF bekleniyor</span>
-          <div class="seg" id="segView" style="width:auto;flex:0 0 auto"><button data-v="print" class="on">Baskı</button><button data-v="cut">Kesim + register</button></div>
+          <div class="seg" id="segView" style="width:auto;flex:0 0 auto"><button data-v="print" class="on">Baskı</button><button data-v="back" id="vBack" class="hidden">Arka yüz</button><button data-v="cut">Kesim + register</button></div>
           <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut">Kesim çizgisini göster</label><div class="zb"><button id="zFit" title="Önizlemeyi alana sığdır">Sığdır</button><button id="zOut" title="Uzaklaştır">−</button><span id="zoomLbl">%–</span><button id="zIn" title="Yakınlaştır">+</button><button id="zReal" title="%100 gerçek ölçü">Gerçek ölçü</button></div></div>
         </div>
         <div class="sheets" id="sheets"></div>
@@ -235,6 +243,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <div class="rev" id="revLbl"></div>
         <div class="dl">
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
+          <button class="btn pri hidden" id="dlBack" disabled>Arka yüz baskı PDF indir ↓</button>
           <button class="btn" id="dlCut" disabled>Kesim PDF indir ↓</button>
           <button class="btn" id="dlCsv" disabled>Yerleşim raporu (CSV) ↓</button>
           <button class="btn" id="dlDeck" disabled>Sunum indir (görsel onay) ↓</button>
@@ -266,9 +275,9 @@ const DEFAULTS = {
   material: 'folyo-arkasi-gri', roll: 137, pay: 40, maxLen: 300, sideMargin: 10, headMargin: 10,
   cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none'
+  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false
 };
-const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio; delete FIXED.substrate;
+const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
 // Ana site (engine.mjs) malzeme listesi: [kod, ad, rulo enleri cm, birim fiyat]
 const MATERIALS = [['folyo-arkasi-gri','Folyo baskı arkası gri',[105,126,137,152],164],['seffaf-folyo','Şeffaf folyo',[105],182],['kumlu-folyo-baski','Kumlu folyo baskı',[126,152],232],['kumlu-folyo-kesim','Kumlu folyo kesim',[126,152],211],['ultra-clear','Ultra Clear',[105],307],['cast-3m','3M Cast',[137],784],['yari-cast-3m','3M yarı Cast',[137],406],['reflektif','Reflektif',[126],354],['one-way-vision','One Way Vision',[105,152],177],['oracal-renk','Oracal renk folyosu',[126],250],['lumen-folyo','Lümen folyo',[126],647],['baskes-folyo','Baskes folyo',[105,126,137,152],230]];
 
@@ -639,6 +648,7 @@ async function addFiles(list) {
     catch (e) { console.error(e); err(`${f.name} açılamadı: ${e.message || e}`); }
   }
   setStatus(ok ? 'Yerleşim hesaplanıyor…' : (items.length ? 'Hazır' : 'PDF bekleniyor'), ok ? 'busy' : '');
+  if (S.duplex) pairBacks();
   renderItems(); scheduleNest(50);
 }
 // Illustrator bazı form/maske kutularını ters (y1 > y2) yazar; bazı görüntüleyiciler bunu yanlış çizer → düzelt
@@ -831,10 +841,47 @@ function sortInst(inst, mode) {
   if (mode !== 'order') a.sort((x, y) => key(y) - key(x) || x.idx - y.idx);
   return a;
 }
+/* ---------- çift yüz ---------- */
+function isBackItem(it) { return S.duplex && it.backOf && items.includes(it.backOf) && it.backOf.back === it; }
+function backOfFront(it) { const b = it.back; return b && items.includes(b) && b.backOf === it ? b : it; } // yoksa arka = ön
+function setBack(front, back) {
+  if (front.back && front.back.backOf === front) front.back.backOf = null;
+  front.back = null;
+  if (back && back !== front) { if (back.backOf && back.backOf.back === back) back.backOf.back = null; if (back.back) { back.back.backOf = null; back.back = null; } back.backOf = front; front.back = back; }
+}
+function pairBacks() { // çift sayfalı PDF: 1-2, 3-4 … (elle seçilmişler korunur)
+  for (const f of files) {
+    const its = items.filter(i => i.file === f).sort((a, b) => a.pageIndex - b.pageIndex);
+    if (its.length < 2 || its.length % 2) continue;
+    for (let i = 0; i + 1 < its.length; i += 2) if (!its[i].backManual && !its[i + 1].backOf && !its[i].back) setBack(its[i], its[i + 1]);
+  }
+}
+// arka yüz çizim öğesi: panel ise karşı panelin bölgesi
+function backDrawItem(fit) {
+  const base = fit.panel ? Object.getPrototypeOf(fit) : fit;
+  const b = backOfFront(base); b.scale = base.scale; const bg = computeGeom(b);
+  if (!fit.panel) return b;
+  const fg = computeGeom(base), r = fit.geom.frame, F = fg.frame, B = bg.frame;
+  const rr = [B[0] + (F[2] - r[2]), r[1] - F[1] + B[1], B[0] + (F[2] - r[0]), r[3] - F[1] + B[1]];
+  const pt = Object.create(b); pt.panel = fit.panel; pt.name = `${b.name} · P${fit.panel.k}`;
+  const pg = { ...fit.geom, key: fit.geom.key + '|b', cut: rectSubs(rr), clipRect: rr, frame: rr, poly: null, masks: {}, _rot: null, _pts: null, _cutA: null, _mthumb: null };
+  pt.geom = pg; return pt;
+}
+function backSheet(sh) {
+  if (sh._back) return sh._back;
+  const pl = sh.pl.map(p => {
+    const bi = backDrawItem(p.it), rot = (360 - p.rot) % 360;
+    const [wf, hf] = rotDims(p.it.geom, p.rot), [wb, hb] = rotDims(bi.geom, rot);
+    return { it: bi, rot, X: sh.W - p.X - wf + (wf - wb) / 2, Y: p.Y + (hf - hb) / 2 };
+  });
+  return sh._back = { ...sh, pl, marks: sh.marks.map(m => ({ ...m, x: sh.W - m.x })), side: 'back' };
+}
 function buildInstances(warns, md) {
   const inst = [];
   items.forEach((it, idx) => {
+    if (isBackItem(it)) return; // arka yüz ayrıca yerleşmez
     const g = computeGeom(it);
+    if (S.duplex) { const b = backOfFront(it); if (b !== it) { b.scale = it.scale; const bg = computeGeom(b); const fc = subsBBox(g.cut), bc = subsBBox(bg.cut); if (Math.abs((fc[2] - fc[0]) - (bc[2] - bc[0])) * g.s / PT > 1 || Math.abs((fc[3] - fc[1]) - (bc[3] - bc[1])) * g.s / PT > 1) warns.push(`${it.name}: arka yüz (${b.name}) kesim ölçüsü ön yüzle uyuşmuyor.`); } }
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
     if (g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: CUT çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
     if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
@@ -1028,7 +1075,7 @@ function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, 
 
 /* ---------------- önizleme ---------------- */
 let zoomZ = null, zoomKeep = false, zoomAnchor = null; // null = sığdır
-function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
+function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlBack', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
 function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
@@ -1065,7 +1112,7 @@ function renderPreview() {
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
 function sceneOf(sh) {
   const md = layout.md, roll = md.rollCm * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
-  const foreks = S.substrate === 'foreks';
+  const foreks = S.substrate === 'foreks' || S.duplex;
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
   const fx = 0, px = fx + S.pay / 2; // baskı alanı folyonun sol makine payından başlar (sol üst hizalı)
   return { W, L, roll, pad, foreks, fx, px: Math.max(fx + S.pay / 2, px), py: pad, sh };
@@ -1089,6 +1136,7 @@ function drawScene(c, sc, k, dpr) {
   c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k);
 }
 function drawSheet(c, sh, k, view, showCut, dpr = 1, ox = 0, oy = 0) {
+  if (view === 'back') { sh = backSheet(sh); view = 'print'; }
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(ox, oy, Math.round(sh.W * k), Math.round(sh.L * k));
   const F = [k / PT, 0, 0, -k / PT, ox, oy + sh.L * k]; // sayfa-pt -> kanvas
   const md = layout.md;
@@ -1128,11 +1176,11 @@ function revText() { return layout && layout.rev ? layout.rev : nextRevPreview()
 const HB = await (await PDFDocument.create()).embedFont(StandardFonts.HelveticaBold);
 function revTextPos(sh) {
   const pair = sh.marks.find(m => m.pair); if (!pair) return null;
-  const rightFeed = S.feed[1] === 'R'; const r = S.regDia / 2, pad = 1;
+  const rightFeed = (S.feed[1] === 'R') !== (sh.side === 'back'); const r = S.regDia / 2, pad = 1;
   const inner = rightFeed ? pair.x + r : S.regEdge + r;           // soldaki noktanın sağ kenarı (mm)
   const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
   if (avail < 3) return null;
-  let txt = revText(); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E·À-ÿ]/g, '');
+  let txt = revText() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E·À-ÿ]/g, '');
   const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5)) * PT / 0.718; // yükseklik: kenar ve iş alanına taşmasın
   const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
   while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
@@ -1161,9 +1209,10 @@ function renderStats() {
   layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; for (const p of s.pl) { A += cutAreaMm(p.it.geom); n++; } });
   const sh = layout.sheets[curSheet];
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
-  const F = roll * Ltot, f2 = sh ? roll * sh.L : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m²';
+  const faces = S.duplex ? 2 : 1; A *= faces; a2 *= faces;
+  const F = roll * Ltot * faces, f2 = sh ? roll * sh.L * faces : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m²';
   const st = [
-    ['Kullanılan folyo', `${fmtCm(roll)} × ${fmtCm(Ltot)} cm = ${m2(F)}`],
+    ['Kullanılan folyo', `${faces > 1 ? '2 yüz × ' : ''}${fmtCm(roll)} × ${fmtCm(Ltot)} cm = ${m2(F)}`],
     ['Folyo doluluğu', pc(A / F)],
     ['Net iş alanı', m2(A)],
     ['Fire', m2(F - A)],
@@ -1192,6 +1241,7 @@ function fmtCm(mm) { const v = mm / 10; return (Math.abs(v - Math.round(v)) < 0.
 function renderItems() {
   const el = $('#items'); el.innerHTML = '';
   for (const it of items) {
+    if (isBackItem(it)) { renderBackCard(el, it); continue; }
     const g = computeGeom(it);
     const ratio = it.scale / 100;
     const cb = subsBBox(g.cut); const wMm = (cb[2] - cb[0]) * g.s / PT, hMm = (cb[3] - cb[1]) * g.s / PT;
@@ -1206,14 +1256,31 @@ function renderItems() {
       <button class="x" title="Kaldır">×</button>`;
     ctl.querySelector('.x').onclick = () => { items.splice(items.indexOf(it), 1); renderItems(); scheduleNest(100); };
     ctl.querySelectorAll('[data-r]').forEach(bt => bt.onclick = () => { it.scale = (+bt.dataset.r) * 100; renderItems(); scheduleNest(); });
+    let brow = null;
+    if (S.duplex) {
+      brow = document.createElement('div'); brow.className = 'brow';
+      brow.innerHTML = `<span>Arka yüz</span><select data-f="back"><option value="">Ön ile aynı</option>${items.filter(o => o !== it && !(isBackItem(o) && o.backOf !== it) && !(o.back && items.includes(o.back) && o.back.backOf === o)).map(o => `<option value="${o.id}" ${backOfFront(it) === o ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select>`;
+    }
+    const bs = brow && brow.querySelector('[data-f=back]');
+    if (bs) bs.onchange = () => { it.backManual = true; setBack(it, items.find(o => o.id === +bs.value) || null); renderItems(); scheduleNest(); };
     const q = ctl.querySelector('[data-f=qty]');
     q.onchange = () => { it.qty = Math.max(0, Math.round(+q.value || 0)); q.value = it.qty; updateTotals(); scheduleNest(); };
-    d.append(tc, mid, ctl); el.appendChild(d);
+    d.append(tc, mid, ctl); if (brow) d.appendChild(brow); el.appendChild(d);
   }
   updateTotals();
 }
+function renderBackCard(el, it) {
+  const d = document.createElement('div'); d.className = 'item back';
+  const tc = document.createElement('canvas'); tc.width = 112; tc.height = 112; computeGeom(it); drawItemThumb(it, tc);
+  const mid = document.createElement('div'); mid.className = 'mid';
+  mid.innerHTML = `<div class="nm" title="${esc(it.name)}">${esc(it.name)}</div><div class="bk">↳ arka yüz: ${esc(it.backOf.name)}</div>`;
+  const ctl = document.createElement('div'); ctl.className = 'ictl';
+  ctl.innerHTML = `<button class="btn sm ghost" title="Ayrı iş yap">Ayır</button>`;
+  ctl.querySelector('button').onclick = () => { const f = it.backOf; f.backManual = true; setBack(f, null); renderItems(); scheduleNest(); };
+  d.append(tc, mid, ctl); el.appendChild(d);
+}
 function updateTotals() {
-  const n = items.reduce((s, i) => s + i.qty, 0);
+  const n = items.filter(i => !isBackItem(i)).reduce((s, i) => s + i.qty, 0);
   const a = items.reduce((s, i) => s + i.qty * (i.geom ? i.geom.areaMm : 0), 0);
   $('#totals').innerHTML = items.length ? `<span>${items.length} iş · <b>${n}</b> adet</span><span>Net alan <b>${(a / 1e6).toFixed(3)} m²</b></span>` : '';
 }
@@ -1292,13 +1359,14 @@ function regOps(sh, forCut) {
   }
   return ops;
 }
-async function buildPrintPdf() {
+async function buildPrintPdf(side = 'front') {
   const out = await PDFDocument.create();
-  out.setTitle(`${ensureRev()} baskı`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
-  const used = [...new Set(layout.sheets.flatMap(s => s.pl.map(p => p.it)))];
+  const sheets = side === 'back' ? layout.sheets.map(backSheet) : layout.sheets;
+  out.setTitle(`${ensureRev()} ${side === 'back' ? 'arka yüz ' : ''}baskı`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
+  const used = [...new Set(sheets.flatMap(s => s.pl.map(p => p.it)))];
   const emb = new Map();
   // CUT/BLEED çizgilerini geçici olarak gizle → sayfayı göm → geri al
-  for (const it of used) setRewrites(it, true);
+  for (const it of used) setRewrites(it, true); // baskıda CUT/BLEED çizgileri her zaman gizlenir
   try {
     for (const it of used) {
       const g = it.geom; const bb = g.clipRect;
@@ -1307,7 +1375,7 @@ async function buildPrintPdf() {
     }
   } finally { for (const it of used) setRewrites(it, false); }
   const font = await out.embedFont(StandardFonts.HelveticaBold);
-  for (const sh of layout.sheets) {
+  for (const sh of sheets) {
     const pg = out.addPage([sh.W * PT, sh.L * PT]);
     const names = new Map();
     for (const p of sh.pl) {
@@ -1363,7 +1431,8 @@ async function withBusy(btn, fn) {
   const t = btn.textContent; btn.disabled = true; btn.textContent = 'Hazırlanıyor…';
   try { await fn() } catch (e) { console.error(e); toast('Hata: ' + (e.message || e)) } finally { btn.disabled = false; btn.textContent = t }
 }
-$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); if (await saveFile(`${fileBase()}_BASKI.pdf`, b, 'application/pdf')) commitRev(); });
+$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); if (await saveFile(`${fileBase()}_${S.duplex ? 'ON_' : ''}BASKI.pdf`, b, 'application/pdf')) commitRev(); });
+$('#dlBack').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf('back'); if (await saveFile(`${fileBase()}_ARKA_BASKI.pdf`, b, 'application/pdf')) commitRev(); });
 $('#dlCut').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); });
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
 
@@ -1399,7 +1468,7 @@ async function buildDeckPdf() {
   const [logo] = await out.embedPdf(logoBytes, [0]);
   const fB = await out.embedFont(StandardFonts.HelveticaBold), fR = await out.embedFont(StandardFonts.Helvetica);
   const ink = P.rgb(0.1, 0.15, 0.19), mute = P.rgb(0.45, 0.49, 0.52), rule = P.rgb(0.85, 0.87, 0.88);
-  const list = items.filter(it => it.qty > 0);
+  const list = items.filter(it => it.qty > 0 && !isBackItem(it));
   // Görsel, çizgisiz kopyadan yüksek çözünürlükte işlenir: her görüntüleyicide (Mac Önizleme dahil) aynı görünür.
   const n = list.length, d = new Date(), dateTxt = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
   for (let i = 0; i < n; i++) {
@@ -1410,30 +1479,37 @@ async function buildDeckPdf() {
     pg.drawText(winAnsi(DECK.title), { x: 615, y: 548, size: 12, font: fB, color: ink });
     pg.drawText(`PAFTA ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, { x: 615, y: 531, size: 10, font: fR, color: mute });
     pg.drawLine({ start: { x: 46, y: 506 }, end: { x: 796, y: 506 }, thickness: 0.7, color: rule });
-    // görsel alanı
-    const bx = 62, by = 151, bw = 718, bh = 331;
-    const k = Math.min(bw / (cb[2] - cb[0]), bh / (cb[3] - cb[1]));
-    const aw = (cb[2] - cb[0]) * k, ah = (cb[3] - cb[1]) * k, ax = bx + (bw - aw) / 2, ay = by + (bh - ah) / 2;
-    const img = await out.embedJpg(await renderArtJpg(it, cb, aw / 72 * 250));
-    const xn = pg.node.newXObject('Art', img.ref);
-    const M = [k, 0, 0, k, ax - cb[0] * k, ay - cb[1] * k];
-    const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
-    if (g.mode === 'shape') ops.push(...subsOps(g.cut), clip(), endPath());
-    ops.push(concatTransformationMatrix(cb[2] - cb[0], 0, 0, cb[3] - cb[1], cb[0], cb[1]), drawObject(xn), popGraphicsState());
-    pg.pushOperators(...ops);
-    // filigran (görsel alanına kırpılı)
-    pg.pushOperators(pushGraphicsState(), P.rectangle(ax, ay, aw, ah), clip(), endPath());
-    for (let j = -1, y = ay - DECK.wmDy; y < ay + ah; j++, y += DECK.wmDy) {
-      for (let x = ax - DECK.wmDx + (j % 2 ? DECK.wmShift : 0); x < ax + aw; x += DECK.wmDx)
-        pg.drawPage(logo, { x, y, xScale: DECK.wmScale, yScale: DECK.wmScale, rotate: P.degrees(DECK.wmAngle), opacity: DECK.wmOpacity });
+    // görsel alanı (çift yüzde ön + arka yan yana)
+    const faces = [[it, cb, null]];
+    if (S.duplex) { const bi = backOfFront(it); bi.scale = it.scale; const bg = computeGeom(bi); faces[0][2] = 'ÖN YÜZ'; faces.push([bi, bbInter(subsBBox(bg.cut), bi.pageBox), 'ARKA YÜZ']); }
+    const slotW = (718 - (faces.length - 1) * 24) / faces.length;
+    for (let fi = 0; fi < faces.length; fi++) {
+      const [fit, fcb, label] = faces[fi]; const fg = fit.geom;
+      const bx = 62 + fi * (slotW + 24), by = label ? 165 : 151, bw = slotW, bh = label ? 317 : 331;
+      const k = Math.min(bw / (fcb[2] - fcb[0]), bh / (fcb[3] - fcb[1]));
+      const aw = (fcb[2] - fcb[0]) * k, ah = (fcb[3] - fcb[1]) * k, ax = bx + (bw - aw) / 2, ay = by + (bh - ah) / 2;
+      const img = await out.embedJpg(await renderArtJpg(fit, fcb, aw / 72 * 250));
+      const xn = pg.node.newXObject('Art', img.ref);
+      const M = [k, 0, 0, k, ax - fcb[0] * k, ay - fcb[1] * k];
+      const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
+      if (fg.mode === 'shape') ops.push(...subsOps(fg.cut), clip(), endPath());
+      ops.push(concatTransformationMatrix(fcb[2] - fcb[0], 0, 0, fcb[3] - fcb[1], fcb[0], fcb[1]), drawObject(xn), popGraphicsState());
+      pg.pushOperators(...ops);
+      // filigran (görsel alanına kırpılı)
+      pg.pushOperators(pushGraphicsState(), P.rectangle(ax, ay, aw, ah), clip(), endPath());
+      for (let j = -1, y = ay - DECK.wmDy; y < ay + ah; j++, y += DECK.wmDy) {
+        for (let x = ax - DECK.wmDx + (j % 2 ? DECK.wmShift : 0); x < ax + aw; x += DECK.wmDx)
+          pg.drawPage(logo, { x, y, xScale: DECK.wmScale, yScale: DECK.wmScale, rotate: P.degrees(DECK.wmAngle), opacity: DECK.wmOpacity });
+      }
+      pg.pushOperators(popGraphicsState());
+      if (label) pg.drawText(label, { x: bx + bw / 2 - fB.widthOfTextAtSize(label, 8) / 2, y: 486, size: 8, font: fB, color: mute });
     }
-    pg.pushOperators(popGraphicsState());
     pg.drawRectangle({ x: 46, y: 137, width: 750, height: 359, borderColor: rule, borderWidth: 0.5 });
     // alt bilgi
     pg.drawLine({ start: { x: 46, y: 120 }, end: { x: 796, y: 120 }, thickness: 0.7, color: rule });
     const wCm = (cb[2] - cb[0]) * g.s / PT / 10, hCm = (cb[3] - cb[1]) * g.s / PT / 10;
     const col = (x, label, val) => { pg.drawText(label, { x, y: 103, size: 7, font: fB, color: mute }); pg.drawText(val, { x, y: 85, size: 10, font: fR, color: ink }); };
-    col(454, 'KESIM ÖLÇÜSÜ / cm', `${wCm.toFixed(2)} × ${hCm.toFixed(2)}`); col(600, 'ADET', String(it.qty)); col(678, 'TARIH', dateTxt);
+    col(454, 'KESIM ÖLÇÜSÜ / cm', `${wCm.toFixed(2)} × ${hCm.toFixed(2)}`); col(600, S.duplex ? 'ADET · ÇIFT YÜZ' : 'ADET', String(it.qty)); col(678, 'TARIH', dateTxt);
     pg.drawText(winAnsi(DECK.note), { x: 46, y: 49, size: 9, font: fR, color: mute });
     pg.drawPage(logo, { x: 752, y: 43, xScale: 0.15096152196661694, yScale: 0.15096152196661694 });
   }
@@ -1531,8 +1607,16 @@ let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.c
 function syncG() { $$('#gRatio button').forEach(b => b.classList.toggle('on', +b.dataset.g === (S.gRatio || 1))); }
 $$('#gRatio button').forEach(b => b.onclick = () => { S.gRatio = +b.dataset.g; syncG(); for (const it of items) it.scale = S.gRatio * 100; renderItems(); scheduleNest(100); toast(S.gRatio === 10 ? 'Tüm dosyalar 10 kat büyütüldü (1:10)' : 'Tüm dosyalar gerçek ölçüde (1:1)'); });
 segInit('#segSub', 'substrate', () => { renderPreview(); });
+function syncDup() {
+  $$('#dupSel button').forEach(b => b.classList.toggle('on', (+b.dataset.d === 1) === !!S.duplex));
+  $('#vBack').classList.toggle('hidden', !S.duplex); $('#dlBack').classList.toggle('hidden', !S.duplex);
+  $('#dlPrint').textContent = S.duplex ? 'Ön yüz baskı PDF indir ↓' : 'Çizgisiz baskı PDF indir ↓';
+  if (!S.duplex && view === 'back') { view = 'print'; $$('#segView button').forEach(x => x.classList.toggle('on', x.dataset.v === 'print')); }
+}
+$$('#dupSel button').forEach(b => b.onclick = () => { S.duplex = b.dataset.d === '1'; if (S.duplex) pairBacks(); syncDup(); renderItems(); scheduleNest(100); });
+syncDup();
 syncG(); bindSettings(); renderMedia(); updateRevLbl();
-window.__nest = { buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
+window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
 </script>
 </body>
 </html>
