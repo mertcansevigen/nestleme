@@ -138,6 +138,7 @@ details .fields{margin-top:10px}
 .stat span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .stat b{font:600 18px var(--mono)}
 .stat.warn b{color:var(--warn)}
+.stat.wide{grid-column:span 2}
 .bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
 .bar i{display:block;height:100%;width:0;background:var(--cut);transition:width .15s}
 .dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:6px}
@@ -1051,7 +1052,7 @@ function renderPreview() {
 }
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
 function sceneOf(sh) {
-  const md = layout.md, roll = md.rollCm * 10, pad = 30;
+  const md = layout.md, roll = md.rollCm * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
   const foreks = S.substrate === 'foreks';
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
   const fx = 0, px = fx + roll - S.pay / 2 - sh.W; // besleme sağdan: baskı alanı folyonun sağ makine payına dayalı
@@ -1068,11 +1069,12 @@ function drawScene(c, sc, k, dpr) {
   // folyo rulosu
   c.fillStyle = '#d9dbe0'; c.fillRect(sc.fx * k, 0, sc.roll * k, sc.L * k);
   c.save(); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = dpr; c.setLineDash([4 * dpr, 4 * dpr]);
-  const mp = S.pay / 2 * k; c.strokeRect(sc.fx * k + mp, -10, sc.roll * k - 2 * mp, sc.L * k + 20); c.restore(); // makine baskı sınırı
+  const mp = S.pay / 2 * k; c.beginPath(); c.moveTo(sc.fx * k + mp, 0); c.lineTo(sc.fx * k + mp, sc.L * k); c.moveTo((sc.fx + sc.roll) * k - mp, 0); c.lineTo((sc.fx + sc.roll) * k - mp, sc.L * k); c.stroke(); c.restore(); // makine baskı sınırı
   c.fillStyle = 'rgba(0,0,0,.45)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`;
-  c.fillText(`FOLYO ${sc.roll / 10} cm`, sc.fx * k + 6 * dpr, 14 * dpr);
+  const fm2 = sc.roll * sc.sh.L / 1e6;
+  c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, sc.fx * k + 6 * dpr, 16 * dpr);
   // baskı alanı gölgesi
-  c.save(); c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 8 * dpr; c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k); c.restore();
+  c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k);
 }
 function drawSheet(c, sh, k, view, showCut, dpr = 1, ox = 0, oy = 0) {
   c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(ox, oy, Math.round(sh.W * k), Math.round(sh.L * k));
@@ -1147,19 +1149,19 @@ function renderStats() {
   layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; for (const p of s.pl) { A += cutAreaMm(p.it.geom); n++; } });
   const sh = layout.sheets[curSheet];
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
-  const F = roll * Ltot, f2 = sh ? roll * sh.L : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' m²';
+  const F = roll * Ltot, f2 = sh ? roll * sh.L : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m²';
   const st = [
-    ['Folyo', `${md.rollCm} cm · ${m2(F)}`],
+    ['Kullanılan folyo', `${fmtCm(roll)} × ${fmtCm(Ltot)} cm = ${m2(F)}`],
     ['Folyo doluluğu', pc(A / F)],
     ['Net iş alanı', m2(A)],
     ['Fire', m2(F - A)],
     ['Sayfa', layout.sheets.length + (layout.sheets.length > 1 ? ` · bu sayfa ${pc(a2 / f2)}` : '')],
-    ['Toplam boy', (Ltot / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' m'],
+    ['Toplam folyo boyu', fmtCm(Ltot) + ' cm'],
     ['Yerleşen', n + ' adet'],
     ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`],
   ];
 
-  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
 }
