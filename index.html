@@ -217,7 +217,6 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <li><b>Register:</b> her zaman eklenir — Qcut Platinum, çift başlangıç alt sağda.</li>
           <li><b>Çift Yüz (foreks):</b> ön yerleşim folyo baskı alanına yapılır; arka folyo aynı alanın yatay aynası (görsel düz okunur), plaka ön yüzden tek kesim. Folyo 2 yüz hesaplanır.</li>
         </ul>
-        <label class="f" style="margin-top:12px"><span>İş adı (dosya adına eklenir)</span><input type="text" data-k="jobName" placeholder="nest"></label>
       </section>
     </div>
 
@@ -277,7 +276,7 @@ const DEFAULTS = {
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
   cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false
 };
-const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
+const FIXED = { ...DEFAULTS }; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
 // Ana site (engine.mjs) malzeme listesi: [kod, ad, rulo enleri cm, birim fiyat]
 const MATERIALS = [['folyo-arkasi-gri','Folyo baskı arkası gri',[105,126,137,152],164],['seffaf-folyo','Şeffaf folyo',[105],182],['kumlu-folyo-baski','Kumlu folyo baskı',[126,152],232],['kumlu-folyo-kesim','Kumlu folyo kesim',[126,152],211],['ultra-clear','Ultra Clear',[105],307],['cast-3m','3M Cast',[137],784],['yari-cast-3m','3M yarı Cast',[137],406],['reflektif','Reflektif',[126],354],['one-way-vision','One Way Vision',[105,152],177],['oracal-renk','Oracal renk folyosu',[126],250],['lumen-folyo','Lümen folyo',[126],647],['baskes-folyo','Baskes folyo',[105,126,137,152],230]];
 
@@ -1038,7 +1037,7 @@ async function runNest() {
     if (!rr) return null;
     fixedRes = fixedRes || rr.res;
     const len = rr.sheets.reduce((a, s) => a + s.usedL + 2 * md.head, 0);
-    rr.md = md; rr.warns = warns; rr.inst = inst; rr.len = len; rr.m2 = w / 100 * len / 1000;
+    rr.md = md; rr.warns = warns; rr.inst = inst; rr.len = len; rr.m2 = w / 100 * len / 1000; rr.sortUsed = sort; rr.hUsed = h;
     rr.cost = rr.unplaced.length * 1e9 + rr.m2 * 1e3 + rr.sheets.length;
     return rr;
   };
@@ -1047,6 +1046,23 @@ async function runNest() {
   for (const [sort, h] of [['long', 'top'], ['perim', 'mix'], ['area', 'center']]) {
     const rr = await one(r.md.rollCm, sort, h); if (!rr) return;
     if (rr.cost < r.cost - 1e-6) r = rr;
+  }
+  // KOPYA PLANI: ilk sayfa adetlere sığdığı kadar tekrarlanır, kalan ayrıca dizilir (folyo belirgin artmıyorsa)
+  if (r.sheets.length > 1 && !r.unplaced.length) {
+    const cnt = new Map(); for (const p of r.sheets[0].pl) cnt.set(p.it, (cnt.get(p.it) || 0) + 1);
+    const tot = new Map(); for (const i of r.inst) tot.set(i.it, (tot.get(i.it) || 0) + 1);
+    let n = Infinity; for (const [it, c] of cnt) n = Math.min(n, Math.floor((tot.get(it) || 0) / c));
+    if (n >= 2) {
+      const left = new Map(tot); for (const [it, c] of cnt) left.set(it, left.get(it) - c * n);
+      const rest = r.inst.filter(i => { const v = left.get(i.it) || 0; if (v > 0) { left.set(i.it, v - 1); return true; } return false; });
+      const rr2 = rest.length ? await nestShapes(sortInst(rest, r.sortUsed), r.md, token, () => {}, SCORES[r.hUsed], fixedRes) : { sheets: [], unplaced: [] };
+      if (token !== nestToken || !rr2) return;
+      const len0 = r.sheets[0].usedL + 2 * r.md.head;
+      const lenC = n * len0 + rr2.sheets.reduce((a, s2) => a + s2.usedL + 2 * r.md.head, 0);
+      if (!rr2.unplaced.length && lenC <= r.len * 1.03) {
+        r = { ...r, sheets: [{ ...r.sheets[0], copies: n }, ...rr2.sheets], len: lenC };
+      }
+    }
   }
   const cmp = widths.map(w => { const x = runs.find(q => q.md.rollCm === w); return { w, ok: x && !x.unplaced.length, len: x ? x.len : 0, m2: x ? x.m2 : 0 } });
   const md = r.md, warns = r.warns, inst = r.inst;
@@ -1060,15 +1076,19 @@ async function runNest() {
     if (S.feed[0] === 'T') { // besleme üstten: düzeni 180° çevir
       for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
     }
-    return { W, L, pl, marks: regMarks(W, L) };
+    return { W, L, pl, marks: regMarks(W, L), copies: s.copies || 1 };
   });
+  // birebir aynı sayfaları tek sayfada topla (kopya)
+  const sig = sh => [Math.round(sh.W), Math.round(sh.L), ...sh.pl.map(p => [p.it.id, p.it.panel ? p.it.panel.k : 0, p.rot, Math.round(p.X * 10), Math.round(p.Y * 10)].join(':')).sort()].join('|');
+  for (let i = 0; i < sheets.length; i++) for (let j = sheets.length - 1; j > i; j--) if (sig(sheets[i]) === sig(sheets[j])) { sheets[i].copies += sheets[j].copies; sheets.splice(j, 1); }
   if (r.unplaced.length) {
     const names = [...new Set(r.unplaced.map(u => u.it.name))];
     warns.unshift(`${r.unplaced.length} adet yerleşmedi (medyadan büyük): ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}`);
   }
   layout = { sheets, warns: [...new Set(warns)], res: r.res, md, cmp, ms: performance.now() - t, rev: null, sig: settingsSig() };
   if (curSheet >= sheets.length) curSheet = 0;
-  showBar(-1); setStatus(`${sheets.length} sayfa · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
+  const prints = sheets.reduce((a, x) => a + x.copies, 0);
+  showBar(-1); setStatus(`${sheets.length} sayfa${prints > sheets.length ? ` (${prints} baskı)` : ''} · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
   renderAll(); renderMedia();
 }
 function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
@@ -1080,7 +1100,7 @@ function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
   layout.sheets.forEach((s, i) => {
-    const b = document.createElement('button'); b.textContent = `Sayfa ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm`;
+    const b = document.createElement('button'); b.textContent = `Sayfa ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm${s.copies > 1 ? ` · ${s.copies} kopya` : ''}`;
     if (i === curSheet) b.className = 'on'; b.onclick = () => { curSheet = i; renderAll() }; el.appendChild(b);
   });
 }
@@ -1180,7 +1200,7 @@ function revTextPos(sh) {
   const inner = rightFeed ? pair.x + r : S.regEdge + r;           // soldaki noktanın sağ kenarı (mm)
   const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
   if (avail < 3) return null;
-  let txt = revText() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E·À-ÿ]/g, '');
+  let txt = revText() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1) txt += ` · ${sh.copies} KOPYA`;
   const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5)) * PT / 0.718; // yükseklik: kenar ve iş alanına taşmasın
   const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
   while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
@@ -1206,7 +1226,7 @@ function renderStats() {
   const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
   if (!layout) return;
   const md = layout.md, roll = md.rollCm * 10; let A = 0, n = 0, Ltot = 0, Atot = 0;
-  layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; for (const p of s.pl) { A += cutAreaMm(p.it.geom); n++; } });
+  let prints = 0; layout.sheets.forEach(s => { const c = s.copies || 1; prints += c; Ltot += s.L * c; Atot += s.W * s.L * c; for (const p of s.pl) { A += cutAreaMm(p.it.geom) * c; n += c; } });
   const sh = layout.sheets[curSheet];
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
   const faces = S.duplex ? 2 : 1; A *= faces; a2 *= faces;
@@ -1216,10 +1236,10 @@ function renderStats() {
     ['Folyo doluluğu', pc(A / F)],
     ['Net iş alanı', m2(A)],
     ['Fire', m2(F - A)],
-    ['Sayfa', layout.sheets.length + (layout.sheets.length > 1 ? ` · bu sayfa ${pc(a2 / f2)}` : '')],
+    ['Sayfa', `${layout.sheets.length}${prints > layout.sheets.length ? ` · ${prints} baskı` : ''}${layout.sheets.length > 1 ? ` · bu sayfa ${pc(a2 / f2)}` : ''}`],
     ['Toplam folyo boyu', fmtCm(Ltot) + ' cm'],
     ['Yerleşen', n + ' adet'],
-    ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`],
+    ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` × ${sh.copies} kopya` : ''}`],
   ];
 
   for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
@@ -1407,14 +1427,14 @@ async function buildCutPdf() {
   return out.save();
 }
 function buildCsv() {
-  const rows = [['REV', 'Sayfa', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim']];
+  const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim']];
   layout.sheets.forEach((s, si) => s.pl.forEach(p => {
     const [w, h] = rotDims(p.it.geom, p.rot);
-    rows.push([layout.rev || '', si + 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen']);
+    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen']);
   }));
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
-function fileBase() { const j = (S.jobName || 'nest').trim().replace(/[^\w\-]+/g, '_') || 'nest'; return `${layout.rev}_${j}` }
+function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 ? `_${layout.sheets[0].copies}-KOPYA` : ''; return `${layout.rev}${c}` }
 
 let dlCap; const dlReady = (async () => { for (let i = 0; i < 40 && !(window.claude && window.claude.use); i++) await sleep(50); try { dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null } catch { dlCap = null } })();
 async function saveFile(name, data, type) {
