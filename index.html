@@ -199,6 +199,8 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <p class="sub">Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.</p>
         <div class="f full"><span>Folyo baskı arkası gri · rulo eni sistem tarafından seçilir</span><div id="rollCmp"></div></div>
         <div class="prod" id="prodSum"></div>
+        <div class="f full" style="margin-top:12px"><span>Uygulama zemini (önizlemede en arkada gösterilir)</span>
+          <div class="seg" id="segSub"><button data-v="none">Yok · yalnız folyo</button><button data-v="foreks">Foreks 156 × 305</button></div></div>
         <ul class="rules">
           <li><b>Kesim:</b> yalnız CUT spot rengi (CMYK 0/100/100/0). CUT yoksa sayfa kenarından dikdörtgen kesilir.</li>
           <li><b>Baskı:</b> CUT ve BLEED çizgileri her zaman gizlenir (çizgisiz baskı).</li>
@@ -221,7 +223,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <div class="sheets" id="sheets"></div>
         <div class="stage" id="stage"><div class="empty" id="empty"><b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.</div><canvas id="cv" class="hidden"></canvas></div>
         <div class="bar" id="bar"><i></i></div>
-        <div class="legend"><span><span class="swatch" style="background:var(--cut)"></span>Kesim</span><span><span class="swatch" style="background:#3a7bff;opacity:.6"></span>Kullanılabilir alan</span><span><span class="swatch" style="background:#000;border:1px solid #555"></span>Register</span></div>
+        <div class="legend"><span><span class="swatch" style="background:var(--cut)"></span>Kesim</span><span><span class="swatch" style="background:#d9dbe0"></span>Folyo</span><span><span class="swatch" style="background:#fff"></span>Baskı alanı</span><span><span class="swatch" style="background:#3a7bff;opacity:.6"></span>Yerleşim sınırı</span><span><span class="swatch" style="background:#000;border:1px solid #555"></span>Register</span></div>
         <div class="stats" id="stats"></div>
         <div class="warns" id="warns"></div>
       </section>
@@ -263,9 +265,9 @@ const DEFAULTS = {
   material: 'folyo-arkasi-gri', roll: 137, pay: 40, maxLen: 300, sideMargin: 10, headMargin: 10,
   cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0
+  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none'
 };
-const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio;
+const FIXED = { ...DEFAULTS }; delete FIXED.jobName; delete FIXED.gRatio; delete FIXED.substrate;
 // Ana site (engine.mjs) malzeme listesi: [kod, ad, rulo enleri cm, birim fiyat]
 const MATERIALS = [['folyo-arkasi-gri','Folyo baskı arkası gri',[105,126,137,152],164],['seffaf-folyo','Şeffaf folyo',[105],182],['kumlu-folyo-baski','Kumlu folyo baskı',[126,152],232],['kumlu-folyo-kesim','Kumlu folyo kesim',[126,152],211],['ultra-clear','Ultra Clear',[105],307],['cast-3m','3M Cast',[137],784],['yari-cast-3m','3M yarı Cast',[137],406],['reflektif','Reflektif',[126],354],['one-way-vision','One Way Vision',[105,152],177],['oracal-renk','Oracal renk folyosu',[126],250],['lumen-folyo','Lümen folyo',[126],647],['baskes-folyo','Baskes folyo',[105,126,137,152],230]];
 
@@ -1027,7 +1029,8 @@ function renderPreview() {
   if (!layout || !layout.sheets.length) { cv.classList.add('hidden'); empty.classList.remove('hidden'); empty.innerHTML = items.length ? '<b>Hiçbir iş medyaya yerleşmedi.</b>Aşağıdaki uyarılara bak; medya enini, en fazla sayfa boyunu ya da panel bölmeyi kontrol et.' : '<b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.'; return }
   cv.classList.remove('hidden'); empty.classList.add('hidden');
   const sh = layout.sheets[curSheet]; const stage = $('#stage');
-  const fit = Math.min((stage.clientWidth - 40) / sh.W, Math.max(0.05, (stage.clientHeight - 40 > 200 ? stage.clientHeight - 40 : window.innerHeight * 0.6) / sh.L));
+  const sc = sceneOf(sh); const SW = sc.W, SL = sc.L;
+  const fit = Math.min((stage.clientWidth - 40) / SW, Math.max(0.05, (stage.clientHeight - 40 > 200 ? stage.clientHeight - 40 : window.innerHeight * 0.6) / SL));
   const real = 96 / 25.4, zMax = Math.max(real * 4, fit);
   let z = zoomZ == null ? fit : Math.min(zMax, Math.max(fit * 0.5, zoomZ));
   // görünen merkezi koru (veya fareyle yakınlaştırmada imleç noktası)
@@ -1037,21 +1040,47 @@ function renderPreview() {
   $('#zoomLbl').textContent = `%${Math.round(z / real * 100)}`;
   $('#zFit').classList.toggle('on', zoomZ == null); $('#zReal').classList.toggle('on', zoomZ != null && Math.abs(z - real) < 1e-6);
   let dpr = Math.min(2, window.devicePixelRatio || 1);
-  if (sh.W * sh.L * (z * dpr) ** 2 > 6e7) dpr = Math.max(0.25, Math.sqrt(6e7 / (sh.W * sh.L)) / z); // tuval boyut sınırı
+  if (SW * SL * (z * dpr) ** 2 > 6e7) dpr = Math.max(0.25, Math.sqrt(6e7 / (SW * SL)) / z); // tuval boyut sınırı
   const k = z * dpr; // piksel / mm
-  cv.width = Math.max(1, Math.round(sh.W * k)); cv.height = Math.max(1, Math.round(sh.L * k));
-  cv.style.width = (sh.W * z) + 'px'; cv.style.height = (sh.L * z) + 'px';
-  if (zoomKeep && oldW > 1) { stage.scrollLeft = cv.offsetLeft + fx * sh.W * z - ax; stage.scrollTop = cv.offsetTop + fy * sh.L * z - ay; }
+  cv.width = Math.max(1, Math.round(SW * k)); cv.height = Math.max(1, Math.round(SL * k));
+  cv.style.width = (SW * z) + 'px'; cv.style.height = (SL * z) + 'px';
+  if (zoomKeep && oldW > 1) { stage.scrollLeft = cv.offsetLeft + fx * SW * z - ax; stage.scrollTop = cv.offsetTop + fy * SL * z - ay; }
   zoomKeep = false; zoomAnchor = null;
-  drawSheet(cv.getContext('2d'), sh, k, view, $('#showCut').checked, dpr);
+  const c = cv.getContext('2d'); drawScene(c, sc, k, dpr);
+  drawSheet(c, sh, k, view, $('#showCut').checked, dpr, sc.px * k, sc.py * k);
 }
-function drawSheet(c, sh, k, view, showCut, dpr = 1) {
-  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, Math.round(sh.W * k), Math.round(sh.L * k));
-  const F = [k / PT, 0, 0, -k / PT, 0, sh.L * k]; // sayfa-pt -> kanvas
+// zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
+function sceneOf(sh) {
+  const md = layout.md, roll = md.rollCm * 10, pad = 30;
+  const foreks = S.substrate === 'foreks';
+  const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
+  const fx = 0, px = fx + roll - S.pay / 2 - sh.W; // besleme sağdan: baskı alanı folyonun sağ makine payına dayalı
+  return { W, L, roll, pad, foreks, fx, px: Math.max(fx + S.pay / 2, px), py: pad, sh };
+}
+function drawScene(c, sc, k, dpr) {
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, c.canvas.width, c.canvas.height);
+  if (sc.foreks) {
+    c.fillStyle = 'rgba(236,230,214,.16)'; c.fillRect(0, 0, 1560 * k, sc.L * k);
+    c.save(); c.strokeStyle = 'rgba(236,230,214,.45)'; c.lineWidth = dpr; c.setLineDash([8 * dpr, 6 * dpr]); c.strokeRect(0.5, -10, 1560 * k - 1, sc.L * k + 20); c.restore();
+    c.fillStyle = 'rgba(236,230,214,.55)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right';
+    c.fillText('FOREKS 156 × 305 cm', 1560 * k - 8 * dpr, sc.L * k - 8 * dpr); c.textAlign = 'left';
+  }
+  // folyo rulosu
+  c.fillStyle = '#d9dbe0'; c.fillRect(sc.fx * k, 0, sc.roll * k, sc.L * k);
+  c.save(); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = dpr; c.setLineDash([4 * dpr, 4 * dpr]);
+  const mp = S.pay / 2 * k; c.strokeRect(sc.fx * k + mp, -10, sc.roll * k - 2 * mp, sc.L * k + 20); c.restore(); // makine baskı sınırı
+  c.fillStyle = 'rgba(0,0,0,.45)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`;
+  c.fillText(`FOLYO ${sc.roll / 10} cm`, sc.fx * k + 6 * dpr, 14 * dpr);
+  // baskı alanı gölgesi
+  c.save(); c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 8 * dpr; c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k); c.restore();
+}
+function drawSheet(c, sh, k, view, showCut, dpr = 1, ox = 0, oy = 0) {
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(ox, oy, Math.round(sh.W * k), Math.round(sh.L * k));
+  const F = [k / PT, 0, 0, -k / PT, ox, oy + sh.L * k]; // sayfa-pt -> kanvas
   const md = layout.md;
   // kullanılabilir alan
   c.save(); c.strokeStyle = 'rgba(58,123,255,.55)'; c.setLineDash([6 * dpr, 5 * dpr]); c.lineWidth = dpr;
-  c.strokeRect(md.side * k, md.head * k, (sh.W - 2 * md.side) * k, (sh.L - 2 * md.head) * k); c.restore();
+  c.strokeRect(ox + md.side * k, oy + md.head * k, (sh.W - 2 * md.side) * k, (sh.L - 2 * md.head) * k); c.restore();
   for (const p of sh.pl) {
     const it = p.it, g = it.geom;
     const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
@@ -1071,13 +1100,13 @@ function drawSheet(c, sh, k, view, showCut, dpr = 1) {
   // register
   c.fillStyle = '#000'; c.strokeStyle = '#000';
   for (const m of sh.marks) {
-    const x = m.x * k, y = (sh.L - m.y) * k, r = S.regDia / 2 * k;
+    const x = ox + m.x * k, y = oy + (sh.L - m.y) * k, r = S.regDia / 2 * k;
     if (S.regProfile === 'cross') { c.lineWidth = Math.max(1, 0.3 * k); c.beginPath(); c.moveTo(x - r, y); c.lineTo(x + r, y); c.moveTo(x, y - r); c.lineTo(x, y + r); c.stroke(); }
     else { c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
   }
   if (view === 'print') {
     const rv = revText(); const tp = revTextPos(sh);
-    if (tp) { c.fillStyle = '#000'; c.font = `bold ${tp.size / PT * k}px Helvetica, Arial, sans-serif`; c.textBaseline = 'alphabetic'; c.fillText(tp.txt, tp.x * k, (sh.L - tp.base / PT) * k); }
+    if (tp) { c.fillStyle = '#000'; c.font = `bold ${tp.size / PT * k}px Helvetica, Arial, sans-serif`; c.textBaseline = 'alphabetic'; c.fillText(tp.txt, ox + tp.x * k, oy + (sh.L - tp.base / PT) * k); }
   }
 }
 function revText() { return layout && layout.rev ? layout.rev : nextRevPreview() }
@@ -1096,25 +1125,40 @@ function revTextPos(sh) {
   const size = sizeFor(txt), w = HB.widthOfTextAtSize(txt, size) / PT;
   return { x: inner + pad + (avail - w) / 2, y: pair.y, size, txt, base: pair.y * PT - 0.718 * size / 2 };
 }
+function cutAreaMm(g) {
+  if (g._cutA != null) return g._cutA;
+  let A = 0;
+  for (const sp of g.cut) {
+    const pts = []; let cur = null;
+    for (const c of sp) {
+      if (c[0] === 'M') { cur = [c[1], c[2]]; pts.push(cur); }
+      else if (c[0] === 'L') { cur = [c[1], c[2]]; pts.push(cur); }
+      else if (c[0] === 'C' && cur) { for (let t = 1; t <= 12; t++) { const u = t / 12, v = 1 - u; pts.push([v*v*v*cur[0] + 3*v*v*u*c[1] + 3*v*u*u*c[3] + u*u*u*c[5], v*v*v*cur[1] + 3*v*v*u*c[2] + 3*v*u*u*c[4] + u*u*u*c[6]]); } cur = [c[5], c[6]]; }
+    }
+    let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; }
+    A += a / 2;
+  }
+  return g._cutA = Math.abs(A) * g.s * g.s / PT / PT;
+}
 function renderStats() {
   const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
   if (!layout) return;
-  const md = layout.md; let A = 0, U = 0, n = 0, Ltot = 0;
-  let Atot = 0; layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; U += (s.W - 2 * md.side) * (s.L - 2 * md.head); for (const p of s.pl) { A += p.it.geom.areaMm; n++; } });
+  const md = layout.md, roll = md.rollCm * 10; let A = 0, n = 0, Ltot = 0, Atot = 0;
+  layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; for (const p of s.pl) { A += cutAreaMm(p.it.geom); n++; } });
   const sh = layout.sheets[curSheet];
-  let a2 = 0; if (sh) for (const p of sh.pl) a2 += p.it.geom.areaMm;
-  const u2 = sh ? (sh.W - 2 * md.side) * (sh.L - 2 * md.head) : 1;
+  let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
+  const F = roll * Ltot, f2 = sh ? roll * sh.L : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' m²';
   const st = [
-    ['Sayfa', layout.sheets.length],
-    ['Toplam boy', (Ltot / 1000).toFixed(2) + ' m'],
+    ['Folyo', `${md.rollCm} cm · ${m2(F)}`],
+    ['Folyo doluluğu', pc(A / F)],
+    ['Net iş alanı', m2(A)],
+    ['Fire', m2(F - A)],
+    ['Sayfa', layout.sheets.length + (layout.sheets.length > 1 ? ` · bu sayfa ${pc(a2 / f2)}` : '')],
+    ['Toplam boy', (Ltot / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' m'],
     ['Yerleşen', n + ' adet'],
-    ['Doluluk (tümü)', U ? (A / U * 100).toFixed(1) + '%' : '–'],
-    ['Bu sayfa', sh ? `${(sh.W / 10).toFixed(1)}×${(sh.L / 10).toFixed(1)} cm` : '–'],
-    ['Bu sayfa doluluk', sh ? (a2 / u2 * 100).toFixed(1) + '%' : '–'],
-    ['Baskı alanı', (Atot / 1e6).toFixed(2) + ' m²'],
-    ['Folyo', `${md.rollCm} cm · ${(md.rollCm * Ltot / 1e5).toFixed(2)} m²`],
+    ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`],
   ];
-  if (layout.res) st.push(['Izgara', layout.res + ' mm']);
+
   for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
@@ -1460,6 +1504,7 @@ let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.c
 
 function syncG() { $$('#gRatio button').forEach(b => b.classList.toggle('on', +b.dataset.g === (S.gRatio || 1))); }
 $$('#gRatio button').forEach(b => b.onclick = () => { S.gRatio = +b.dataset.g; syncG(); for (const it of items) it.scale = S.gRatio * 100; renderItems(); scheduleNest(100); toast(S.gRatio === 10 ? 'Tüm dosyalar 10 kat büyütüldü (1:10)' : 'Tüm dosyalar gerçek ölçüde (1:1)'); });
+segInit('#segSub', 'substrate', () => { renderPreview(); });
 syncG(); bindSettings(); renderMedia(); updateRevLbl();
 window.__nest = { buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
 </script>
