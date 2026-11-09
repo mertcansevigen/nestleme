@@ -46,6 +46,7 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .btn.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}
 .grid{display:grid;grid-template-columns:minmax(380px,460px) 1fr;gap:18px;align-items:start}
 @media(max-width:1050px){.grid{grid-template-columns:1fr}}
+.grid>div{min-width:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
 .card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
 .card h2 .n{font:700 11px var(--mono);color:var(--cut);border:1px solid rgba(255,45,45,.4);padding:3px 6px;border-radius:6px}
@@ -120,12 +121,18 @@ details .fields{margin-top:10px}
 .sheets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .sheets button{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:6px 10px;cursor:pointer;font:600 12px var(--mono);color:var(--muted)}
 .sheets button.on{color:var(--text);border-color:var(--cut)}
-.stage{background:repeating-conic-gradient(#1b1c20 0 25%,#16171a 0 50%) 0 0/18px 18px;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:72vh;min-height:360px;display:flex;align-items:flex-start;justify-content:center;padding:18px;position:relative}
-.stage canvas{box-shadow:0 8px 40px rgba(0,0,0,.5);display:block}
+.stage{background:repeating-conic-gradient(#1b1c20 0 25%,#16171a 0 50%) 0 0/18px 18px;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:72vh;min-height:360px;display:block;padding:18px;position:relative}
+.stage canvas{box-shadow:0 8px 40px rgba(0,0,0,.5);display:block;margin:0 auto}
+.stage .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px}
 .empty{color:var(--muted);text-align:center;margin:auto;padding:60px 20px}
 .empty b{display:block;color:var(--text);font-size:16px;margin-bottom:6px}
 .zoom{display:flex;align-items:center;gap:8px;margin-left:auto}
-.zoom input[type=range]{width:120px;accent-color:var(--cut)}
+.zb{display:flex;align-items:center;background:#121315;border:1px solid var(--line2);border-radius:9px;padding:2px;gap:2px}
+.zb button{border:none;background:none;color:var(--muted);font:600 12px Inter;padding:6px 9px;border-radius:7px;cursor:pointer}
+.zb button:hover{background:var(--panel2);color:var(--text)}
+.zb button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+#zOut,#zIn{font-size:15px;width:30px;padding:4px 0}
+#zoomLbl{font:600 12px var(--mono);color:var(--text);min-width:52px;text-align:center}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px}
 .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .stat span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
@@ -209,7 +216,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <h2>Önizleme</h2>
           <span class="status" id="status">PDF bekleniyor</span>
           <div class="seg" id="segView" style="width:auto;flex:0 0 auto"><button data-v="print" class="on">Baskı</button><button data-v="cut">Kesim + register</button></div>
-          <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut">Kesim çizgisini göster</label><input type="range" id="zoom" min="0" max="100" value="0"><span class="rev" id="zoomLbl">Sığdır</span></div>
+          <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut">Kesim çizgisini göster</label><div class="zb"><button id="zFit" title="Önizlemeyi alana sığdır">Sığdır</button><button id="zOut" title="Uzaklaştır">−</button><span id="zoomLbl">%–</span><button id="zIn" title="Yakınlaştır">+</button><button id="zReal" title="%100 gerçek ölçü">Gerçek ölçü</button></div></div>
         </div>
         <div class="sheets" id="sheets"></div>
         <div class="stage" id="stage"><div class="empty" id="empty"><b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.</div><canvas id="cv" class="hidden"></canvas></div>
@@ -1005,7 +1012,7 @@ async function runNest() {
 function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
 
 /* ---------------- önizleme ---------------- */
-let zoomPx = 0;
+let zoomZ = null, zoomKeep = false, zoomAnchor = null; // null = sığdır
 function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
 function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
@@ -1020,16 +1027,22 @@ function renderPreview() {
   if (!layout || !layout.sheets.length) { cv.classList.add('hidden'); empty.classList.remove('hidden'); empty.innerHTML = items.length ? '<b>Hiçbir iş medyaya yerleşmedi.</b>Aşağıdaki uyarılara bak; medya enini, en fazla sayfa boyunu ya da panel bölmeyi kontrol et.' : '<b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.'; return }
   cv.classList.remove('hidden'); empty.classList.add('hidden');
   const sh = layout.sheets[curSheet]; const stage = $('#stage');
-  const zv = +$('#zoom').value;
-  const fit = Math.min((stage.clientWidth - 40) / sh.W, Math.max(0.05, (window.innerHeight * 0.68) / sh.L));
-  const real = 96 / 25.4;
-  let z = zv === 0 ? fit : fit + (real * 2 - fit) * (zv / 100);
-  $('#zoomLbl').textContent = zv === 0 ? 'Sığdır' : `%${Math.round(z / real * 100)}`;
-  const maxSide = 14000; z = Math.min(z, maxSide / sh.W, maxSide / sh.L);
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const fit = Math.min((stage.clientWidth - 40) / sh.W, Math.max(0.05, (stage.clientHeight - 40 > 200 ? stage.clientHeight - 40 : window.innerHeight * 0.6) / sh.L));
+  const real = 96 / 25.4, zMax = Math.max(real * 4, fit);
+  let z = zoomZ == null ? fit : Math.min(zMax, Math.max(fit * 0.5, zoomZ));
+  // görünen merkezi koru (veya fareyle yakınlaştırmada imleç noktası)
+  const oldW = cv.offsetWidth || 1, oldH = cv.offsetHeight || 1;
+  const ax = zoomAnchor ? zoomAnchor.x : stage.clientWidth / 2, ay = zoomAnchor ? zoomAnchor.y : stage.clientHeight / 2;
+  const fx = (stage.scrollLeft + ax - cv.offsetLeft) / oldW, fy = (stage.scrollTop + ay - cv.offsetTop) / oldH;
+  $('#zoomLbl').textContent = `%${Math.round(z / real * 100)}`;
+  $('#zFit').classList.toggle('on', zoomZ == null); $('#zReal').classList.toggle('on', zoomZ != null && Math.abs(z - real) < 1e-6);
+  let dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (sh.W * sh.L * (z * dpr) ** 2 > 6e7) dpr = Math.max(0.25, Math.sqrt(6e7 / (sh.W * sh.L)) / z); // tuval boyut sınırı
   const k = z * dpr; // piksel / mm
   cv.width = Math.max(1, Math.round(sh.W * k)); cv.height = Math.max(1, Math.round(sh.L * k));
   cv.style.width = (sh.W * z) + 'px'; cv.style.height = (sh.L * z) + 'px';
+  if (zoomKeep && oldW > 1) { stage.scrollLeft = cv.offsetLeft + fx * sh.W * z - ax; stage.scrollTop = cv.offsetTop + fy * sh.L * z - ay; }
+  zoomKeep = false; zoomAnchor = null;
   drawSheet(cv.getContext('2d'), sh, k, view, $('#showCut').checked, dpr);
 }
 function drawSheet(c, sh, k, view, showCut, dpr = 1) {
@@ -1046,10 +1059,9 @@ function drawSheet(c, sh, k, view, showCut, dpr = 1) {
     if (view === 'print') {
       c.save();
       c.clip(path2d(rectSubs(g.clipRect), MF));
-      if (g.poly) c.clip(path2d(polysToSubs(g.poly), MF), 'evenodd');
       const th = it.thumb; const G = [1 / th.ppp, 0, 0, -1 / th.ppp, th.view[0], th.view[3]];
       const T = Mx.mul(G, MF); c.setTransform(T[0], T[1], T[2], T[3], T[4], T[5]);
-      c.drawImage(th.cv, 0, 0); c.restore();
+      c.imageSmoothingQuality = 'high'; c.drawImage(maskedThumb(g, th), 0, 0); c.restore();
     }
     if (view === 'cut' || showCut) {
       c.save(); c.strokeStyle = view === 'cut' ? '#e00000' : 'rgba(255,0,0,.9)'; c.lineWidth = Math.max(1, 0.35 * k * 0.6);
@@ -1147,13 +1159,27 @@ function updateTotals() {
   const a = items.reduce((s, i) => s + i.qty * (i.geom ? i.geom.areaMm : 0), 0);
   $('#totals').innerHTML = items.length ? `<span>${items.length} iş · <b>${n}</b> adet</span><span>Net alan <b>${(a / 1e6).toFixed(3)} m²</b></span>` : '';
 }
+// önizleme için bleed konturuna yumuşak kenarla maskelenmiş görsel (CUT dolgusu + bleed kalınlığında yuvarlak kontur)
+function maskedThumb(g, th) {
+  if (!g.poly) return th.cv;
+  if (g._mthumb && g._mthumb.src === th.cv) return g._mthumb.cv;
+  const cv = document.createElement('canvas'); cv.width = th.cv.width; cv.height = th.cv.height; const c = cv.getContext('2d');
+  const T = [th.ppp, 0, 0, -th.ppp, -th.view[0] * th.ppp, th.view[3] * th.ppp];
+  const mk = document.createElement('canvas'); mk.width = cv.width; mk.height = cv.height; const m = mk.getContext('2d');
+  m.clip(path2d(rectSubs(g.clipRect), T));
+  const pth = path2d(g.cut, T); m.fillStyle = '#000'; m.strokeStyle = '#000';
+  m.lineWidth = 2 * (S.bleed * PT / g.s) * th.ppp; m.lineJoin = 'round'; m.lineCap = 'round';
+  m.fill(pth, 'nonzero'); m.stroke(pth);
+  c.drawImage(th.cv, 0, 0); c.globalCompositeOperation = 'destination-in'; c.drawImage(mk, 0, 0);
+  g._mthumb = { src: th.cv, cv }; return cv;
+}
 function drawItemThumb(it, tc) {
   const c = tc.getContext('2d'); const g = it.geom, th = it.thumb; if (!th) return;
   const fw = g.frame[2] - g.frame[0], fh = g.frame[3] - g.frame[1]; const k = Math.min(100 / fw, 100 / fh);
   const F = [k, 0, 0, -k, (112 - fw * k) / 2 - g.frame[0] * k, (112 - fh * k) / 2 + g.frame[3] * k];
-  c.save(); c.clip(path2d(rectSubs(g.clipRect), F)); if (g.poly) c.clip(path2d(polysToSubs(g.poly), F), 'evenodd');
+  c.save(); c.clip(path2d(rectSubs(g.clipRect), F));
   const G = [1 / th.ppp, 0, 0, -1 / th.ppp, th.view[0], th.view[3]]; const T = Mx.mul(G, F);
-  c.setTransform(...T); c.drawImage(th.cv, 0, 0); c.restore();
+  c.setTransform(...T); c.drawImage(maskedThumb(g, th), 0, 0); c.restore();
 }
 
 /* ---------------- REV ---------------- */
@@ -1415,7 +1441,17 @@ function segInit(sel, key, cb) {
   const el = $(sel); el.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === S[key]); b.onclick = () => { S[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); cb() } });
 }
 $('#segView').querySelectorAll('button').forEach(b => b.onclick = () => { view = b.dataset.v; $('#segView').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderPreview() });
-$('#zoom').oninput = renderPreview; $('#showCut').onchange = renderPreview;
+$('#showCut').onchange = renderPreview;
+const curZ = () => parseFloat($('#cv').style.width) / (layout ? layout.sheets[curSheet].W : 1);
+const setZoom = (z, anchor) => { zoomZ = z; zoomKeep = true; zoomAnchor = anchor || null; renderPreview(); };
+$('#zFit').onclick = () => { zoomZ = null; renderPreview(); $('#stage').scrollTo(0, 0); };
+$('#zReal').onclick = () => setZoom(96 / 25.4);
+$('#zIn').onclick = () => setZoom(curZ() * 1.5);
+$('#zOut').onclick = () => setZoom(curZ() / 1.5);
+$('#stage').addEventListener('wheel', e => {
+  if (!(e.ctrlKey || e.metaKey) || !layout) return; e.preventDefault();
+  const r = $('#stage').getBoundingClientRect(); setZoom(curZ() * (e.deltaY < 0 ? 1.2 : 1 / 1.2), { x: e.clientX - r.left, y: e.clientY - r.top });
+}, { passive: false });
 let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(renderPreview, 150) });
 
 function setStatus(t, cls = '') { const s = $('#status'); s.textContent = t; s.className = 'status ' + cls; }
