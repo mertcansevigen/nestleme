@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111214">
+<link rel="icon" href="data:,">
+<title>Nestleme Atölyesi · Mertcan SEVİGEN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="pdf-lib.min.js"></script>
+<style>
+:root{
+  --bg:#111214; --panel:#18191c; --panel2:#1f2024; --line:#2a2c31; --line2:#363940;
+  --text:#ececee; --muted:#9a9ca3; --dim:#6c6f77;
+  --cut:#ff2d2d; --bleed:#ff8a7a; --ok:#3ecf8e; --warn:#ffb020; --acc:#ff2d2d;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.top{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(17,18,20,.94);backdrop-filter:blur(8px);z-index:20}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--cut);box-shadow:0 0 0 3px rgba(255,45,45,.18)}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:11.5px;letter-spacing:.4px}
+.nav{display:flex;gap:4px;margin-left:auto}
+.nav a{padding:7px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--panel2);color:var(--text)}
+.wrap{max-width:1600px;margin:0 auto;padding:22px}
+.hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px;justify-content:space-between;margin-bottom:18px}
+.eyebrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tag{font:600 10.5px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--muted);border:1px solid var(--line2);padding:4px 8px;border-radius:999px}
+.tag.red{color:#ffd0d0;border-color:rgba(255,45,45,.45);background:rgba(255,45,45,.08)}
+h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
+.lead{color:var(--muted);margin:0;max-width:720px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.steps span{font-size:12.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:5px 10px;border-radius:8px}
+.steps b{color:var(--text);font-family:var(--mono);margin-right:6px}
+.btn{border:1px solid var(--line2);background:var(--panel2);padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn:hover{border-color:#4a4d55;background:#25272c}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.pri:hover{background:#ff4646}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}
+.grid{display:grid;grid-template-columns:minmax(380px,460px) 1fr;gap:18px;align-items:start}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.card h2 .n{font:700 11px var(--mono);color:var(--cut);border:1px solid rgba(255,45,45,.4);padding:3px 6px;border-radius:6px}
+.card .sub{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+.drop{display:block;border:1.5px dashed var(--line2);border-radius:12px;padding:22px;text-align:center;cursor:pointer;transition:.15s;background:var(--panel2)}
+.drop:hover,.drop.over{border-color:var(--cut);background:rgba(255,45,45,.05)}
+.drop b{display:block;margin-bottom:4px}
+.drop small{color:var(--muted)}
+.items{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:520px;overflow:auto;padding-right:2px}
+.item{display:grid;grid-template-columns:64px 1fr;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px}
+.item canvas{width:64px;height:64px;object-fit:contain;background:#0c0c0d;border-radius:6px}
+.item .nm{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{font:11.5px var(--mono);color:var(--muted);margin:2px 0 6px}
+.badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.badge{font:600 10px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var(--line2);color:var(--muted)}
+.badge.cut{color:#ffb4b4;border-color:rgba(255,45,45,.5)}
+.badge.ok{color:#9ff0c9;border-color:rgba(62,207,142,.45)}
+.badge.warn{color:#ffd58a;border-color:rgba(255,176,32,.5)}
+.ictl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ictl label{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.ictl input[type=number]{width:62px}
+.x{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px}
+.x:hover{color:var(--cut)}
+.totals{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:10px}
+.totals b{color:var(--text);font-family:var(--mono)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f.full{grid-column:1/-1}
+.f>span{font-size:11.5px;color:var(--muted)}
+input[type=number],input[type=text],select{background:#121315;border:1px solid var(--line2);border-radius:8px;padding:7px 9px;width:100%;outline:none}
+input:focus,select:focus{border-color:#5a5d66}
+input[type=number]{font-family:var(--mono)}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.chk input{accent-color:var(--cut);width:16px;height:16px}
+.seg{display:flex;background:#121315;border:1px solid var(--line2);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;white-space:nowrap;border:none;background:none;padding:7px 8px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:600;font-size:12.5px}
+.seg button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+details{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+summary{cursor:pointer;font-weight:600;font-size:13px;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:'+';color:var(--muted);font-family:var(--mono)}
+details[open] summary::after{content:'–'}
+summary small{color:var(--muted);font-weight:400;margin-left:6px}
+details .fields{margin-top:10px}
+.note{font-size:12px;color:var(--muted);background:#141517;border:1px solid var(--line);border-left:3px solid var(--bleed);border-radius:8px;padding:8px 10px;margin-top:10px}
+.note b{color:var(--text)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.pv-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.pv-head h2{margin:0}
+.status{font:600 11px var(--mono);color:var(--muted);padding:4px 8px;border:1px solid var(--line2);border-radius:999px}
+.status.ok{color:#9ff0c9;border-color:rgba(62,207,142,.45)}
+.status.busy{color:#ffd58a;border-color:rgba(255,176,32,.5)}
+.status.err{color:#ffb4b4;border-color:rgba(255,45,45,.5)}
+.sheets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sheets button{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:6px 10px;cursor:pointer;font:600 12px var(--mono);color:var(--muted)}
+.sheets button.on{color:var(--text);border-color:var(--cut)}
+.stage{background:repeating-conic-gradient(#1b1c20 0 25%,#16171a 0 50%) 0 0/18px 18px;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:72vh;min-height:360px;display:flex;align-items:flex-start;justify-content:center;padding:18px;position:relative}
+.stage canvas{box-shadow:0 8px 40px rgba(0,0,0,.5);display:block}
+.empty{color:var(--muted);text-align:center;margin:auto;padding:60px 20px}
+.empty b{display:block;color:var(--text);font-size:16px;margin-bottom:6px}
+.zoom{display:flex;align-items:center;gap:8px;margin-left:auto}
+.zoom input[type=range]{width:120px;accent-color:var(--cut)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.stat b{font:600 18px var(--mono)}
+.stat.warn b{color:var(--warn)}
+.bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--cut);transition:width .15s}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:6px}
+.dl .btn{justify-content:center}
+.rev{font:600 12px var(--mono);color:var(--muted)}
+.rev b{color:var(--text)}
+.warns{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.warns div{font-size:12.5px;color:#ffd58a;background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.3);border-radius:8px;padding:7px 10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:#26282d;border:1px solid var(--line2);padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:50;font-size:13px}
+.toast.on{opacity:1;transform:translateX(-50%)}
+footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
+.hidden{display:none!important}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.tbl th,.tbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.tbl th{color:var(--muted);font-weight:500}
+.tbl td{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><span class="dot"></span><div>Nestleme Atölyesi<small>MERTCAN SEVİGEN ÜRETİM ATÖLYESİ</small></div></div>
+  <nav class="nav"><a href="#dosyalar">Dosyalar</a><a href="#yerlesim">Yerleşim</a><a href="#indir">İndir</a></nav>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <div class="eyebrow"><span class="tag red">Nestleme</span><span class="tag">PDF → Rulo / Tabaka</span><span class="tag">PDF'ler cihazınızda işlenir</span></div>
+      <h1>Çoklu işleri tek baskıya yerleştir.</h1>
+      <p class="lead">Birden çok PDF'i yükle, adetleri gir; özel kesim şekillerini birbirine sokarak rulo ya da tabakaya en az fireyle yerleştir. Çizgisiz baskı ve ayrı kesim dosyası aynı koordinatlarda iner.</p>
+      <div class="steps"><span><b>1</b>PDF'leri yükle</span><span><b>2</b>Medya ve aralıkları ayarla</span><span><b>3</b>Yerleşimi kontrol et, indir</span></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="btnClear">Yeni iş / Temizle</button>
+      <button class="btn" id="btnSample">Örnek işle başla</button>
+      <button class="btn ghost" id="btnSamplePdf" title="CUT + 3 mm BLEED hazırlanmış örnek PDF">3 mm CUT/BLEED örneğini indir</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <section class="card" id="dosyalar">
+        <h2><span class="n">01</span>Dosyalar ve adetler</h2>
+        <p class="sub">Her sayfa ayrı bir iş olarak listelenir. Gerçek ölçü ve vektörler korunur.</p>
+        <label class="drop" id="drop">
+          <input type="file" id="fileIn" accept=".pdf,.ai,application/pdf,application/postscript,application/illustrator" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+          <b>PDF dosyalarını buraya bırak veya seçmek için tıkla</b>
+          <small>PDF veya PDF uyumlu .ai · tek dosya 250 MB · iş toplamı 400 MB</small>
+          <span class="btn sm" style="margin-top:10px">Dosya seç</span>
+        </label>
+        <div class="warns" id="fileErr"></div>
+        <div class="items" id="items"></div>
+        <div class="totals" id="totals"></div>
+      </section>
+
+      <section class="card" id="ayarlar">
+        <h2><span class="n">02</span>Medya, kesim ve yerleşim</h2>
+        <p class="sub">Değişiklikler yerleşimi otomatik yeniden hesaplar.</p>
+
+        <div class="f full" style="margin-bottom:10px"><span>Medya tipi</span>
+          <div class="seg" id="segMedia"><button data-v="roll" class="on">Rulo (boy otomatik)</button><button data-v="sheet">Tabaka (sabit ölçü)</button></div>
+        </div>
+        <div class="fields">
+          <label class="f"><span>Medya eni (cm)</span><input type="number" step="0.1" min="5" data-k="mediaW"></label>
+          <label class="f" data-show="roll"><span>En fazla sayfa boyu (cm)</span><input type="number" step="1" min="10" data-k="maxLen"></label>
+          <label class="f" data-show="sheet"><span>Tabaka boyu (cm)</span><input type="number" step="0.1" min="5" data-k="sheetH"></label>
+          <label class="f"><span>Yan kenar payı (mm)</span><input type="number" step="0.5" min="0" data-k="sideMargin"></label>
+          <label class="f"><span>Baş / son payı (mm)</span><input type="number" step="0.5" min="0" data-k="headMargin"></label>
+        </div>
+
+        <div class="f full" style="margin:14px 0 10px"><span>Kesim şekli</span>
+          <div class="seg" id="segCut"><button data-v="shape" class="on">PDF'deki özel şekil</button><button data-v="rect">Dikdörtgen</button></div>
+        </div>
+        <div class="fields">
+          <label class="f"><span>Bleed / taşma (mm)</span><input type="number" step="0.5" min="0" data-k="bleed"></label>
+          <label class="f"><span>Kesim çizgisi kaynağı</span>
+            <select data-k="cutSource">
+              <option value="auto">Otomatik (CUT katmanı, kırmızı, pembe, CutContour)</option>
+              <option value="red">Yalnız kırmızı (0/100/100/0)</option>
+              <option value="magenta">Yalnız pembe / magenta</option>
+              <option value="layer">Yalnız CUT adlı katman / spot</option>
+            </select></label>
+          <label class="f full chk"><input type="checkbox" data-k="hideLines">Baskı dosyasında CUT ve BLEED çizgilerini gizle (çizgisiz baskı)</label>
+        </div>
+        <div class="note"><span class="swatch" style="background:var(--cut)"></span><b>CUT</b> CMYK 0/100/100/0 · <span class="swatch" style="background:var(--bleed)"></span><b>BLEED</b> CMYK 0/50/50/0. Özel şekilde görsel, kesim çizgisinden bleed kadar taşan bir konturla kırpılır; böylece şekiller birbirine girebilir.</div>
+
+        <details open>
+          <summary>Aralık ve döndürme <small>Yerleşim aralığı</small></summary>
+          <div class="fields">
+            <label class="f full"><span>Yerleşim aralığı</span>
+              <select data-k="gapMode">
+                <option value="auto">Otomatik — CUT + bleed doğrulanmışsa ek boşluk yok</option>
+                <option value="verified">Yalnız doğrulanmış bleed'den bleed'e</option>
+                <option value="manual">Elle ek boşluk ver</option>
+              </select></label>
+            <label class="f"><span>Doğrulanmamış dosyada boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapUnverified"></label>
+            <label class="f"><span>Elle ek boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapManual"></label>
+            <label class="f chk"><input type="checkbox" data-k="rot90">90° döndürmeye izin ver</label>
+            <label class="f chk"><input type="checkbox" data-k="rot180">180° döndürmeye izin ver</label>
+            <label class="f"><span>Yerleştirme hassasiyeti</span>
+              <select data-k="res">
+                <option value="auto">Otomatik</option>
+                <option value="0.5">Çok hassas · 0.5 mm</option>
+                <option value="1">Hassas · 1 mm</option>
+                <option value="2">Hızlı · 2 mm</option>
+                <option value="4">Çok hızlı · 4 mm</option>
+              </select></label>
+            <label class="f"><span>Optimizasyon</span>
+              <select data-k="opt">
+                <option value="fast">Hızlı · tek deneme</option>
+                <option value="bal">Dengeli · 4 deneme</option>
+                <option value="deep">Yoğun · 8 deneme</option>
+              </select></label>
+            <label class="f"><span>Öncelikli sıralama</span>
+              <select data-k="sort">
+                <option value="area">Büyükten küçüğe (alan)</option>
+                <option value="long">En uzun kenara göre</option>
+                <option value="perim">Çevreye göre</option>
+                <option value="order">Liste sırası (sabit)</option>
+              </select></label>
+          </div>
+        </details>
+
+        <details>
+          <summary>Register <small>Qcut / artı işaretleri</small></summary>
+          <div class="fields">
+            <label class="f full chk"><input type="checkbox" data-k="regOn">Baskı ve kesim dosyasına register ekle</label>
+            <label class="f full"><span>Register profili</span>
+              <select data-k="regProfile">
+                <option value="qcut">Qcut Platinum — çift başlangıç + ara noktalar</option>
+                <option value="cross">Standart artı</option>
+              </select></label>
+            <label class="f"><span>Register çapı / artı boyu (mm)</span><input type="number" step="0.5" min="1" data-k="regDia"></label>
+            <label class="f"><span>Nokta merkezinin kenara mesafesi (mm)</span><input type="number" step="0.5" min="1" data-k="regEdge"></label>
+            <label class="f"><span>Nokta çevresinde boş alan (mm)</span><input type="number" step="0.5" min="0" data-k="regClear"></label>
+            <label class="f"><span>En fazla register aralığı (mm)</span><input type="number" step="10" min="50" data-k="regMaxGap"></label>
+            <label class="f"><span>Başlangıç çifti merkez aralığı (mm)</span><input type="number" step="0.5" min="5" data-k="regPair"></label>
+            <label class="f"><span>Besleme başlangıcı</span>
+              <select data-k="feed">
+                <option value="BR">Alt sağ</option><option value="BL">Alt sol</option>
+                <option value="TR">Üst sağ</option><option value="TL">Üst sol</option>
+              </select></label>
+          </div>
+          <div class="note">Noktalar baskı ve kesimde aynı koordinatlardadır. Başlangıçta yan yana iki nokta, ara noktalar en fazla ayarlanan aralıkla dizilir. REV numarası yalnız baskıda, başlangıç çiftinin yanına yazılır.</div>
+        </details>
+
+        <details>
+          <summary>Kesim dosyası ve kayıtlı ayarlar</summary>
+          <div class="fields">
+            <label class="f"><span>Kesim çizgi kalınlığı (pt)</span><input type="number" step="0.05" min="0.05" data-k="cutWidth"></label>
+            <label class="f"><span>İş adı (dosya adına eklenir)</span><input type="text" data-k="jobName" placeholder="nest"></label>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+            <button class="btn sm" id="btnSaveSet">Ayarları kaydet</button>
+            <button class="btn sm" id="btnExportSet">Dışa aktar</button>
+            <label class="btn sm">İçe aktar<input type="file" id="setIn" accept=".json,application/json" hidden></label>
+            <button class="btn sm ghost" id="btnResetSet">Varsayılana dön</button>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <div>
+      <section class="card" id="yerlesim">
+        <div class="pv-head">
+          <h2>Önizleme</h2>
+          <span class="status" id="status">PDF bekleniyor</span>
+          <div class="seg" id="segView" style="width:auto;flex:0 0 auto"><button data-v="print" class="on">Baskı</button><button data-v="cut">Kesim + register</button></div>
+          <div class="zoom"><label class="chk" style="font-size:12px"><input type="checkbox" id="showCut" checked>Kesim çizgisi</label><input type="range" id="zoom" min="0" max="100" value="0"><span class="rev" id="zoomLbl">Sığdır</span></div>
+        </div>
+        <div class="sheets" id="sheets"></div>
+        <div class="stage" id="stage"><div class="empty" id="empty"><b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.</div><canvas id="cv" class="hidden"></canvas></div>
+        <div class="bar" id="bar"><i></i></div>
+        <div class="legend"><span><span class="swatch" style="background:var(--cut)"></span>Kesim</span><span><span class="swatch" style="background:#3a7bff;opacity:.6"></span>Kullanılabilir alan</span><span><span class="swatch" style="background:#000;border:1px solid #555"></span>Register</span></div>
+        <div class="stats" id="stats"></div>
+        <div class="warns" id="warns"></div>
+      </section>
+
+      <section class="card" id="indir">
+        <h2><span class="n">03</span>Dosyalarını indir</h2>
+        <p class="sub">Çizgisiz baskı ve ayrı kesim; aynı ölçü ve koordinatlar. Baskı %100 ölçekte yapılır.</p>
+        <div class="rev" id="revLbl">Sıradaki: <b>NST-0001</b> · numara ilk indirmede ayrılır, baskı ve kesim aynı REV'i taşır.</div>
+        <div class="dl">
+          <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
+          <button class="btn" id="dlCut" disabled>Kesim PDF indir ↓</button>
+          <button class="btn" id="dlCsv" disabled>Yerleşim raporu (CSV) ↓</button>
+        </div>
+        <table class="tbl" id="tbl"></table>
+      </section>
+    </div>
+  </div>
+  <footer>Mertcan SEVİGEN Üretim Atölyesi · Nestleme · Çizgisiz baskı · Ayrı kesim</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import * as pdfjsLib from './pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./pdf.worker.min.mjs', import.meta.url).href;
+const P = window.PDFLib;
+const { PDFDocument, PDFName, PDFDict, PDFArray, PDFRef, PDFRawStream, PDFStream, PDFNumber, PDFString, PDFHexString,
+  decodePDFRawStream, StandardFonts, cmyk, pushGraphicsState, popGraphicsState, concatTransformationMatrix, moveTo, lineTo,
+  appendBezierCurve, closePath, clip, clipEvenOdd, endPath, drawObject, setStrokingCmykColor, setLineWidth, stroke,
+  setLineJoin, LineJoinStyle } = P;
+
+const PT = 72 / 25.4;            // pt / mm
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------------- ayarlar ---------------- */
+const DEFAULTS = {
+  media: 'roll', mediaW: 137, maxLen: 300, sheetH: 100, sideMargin: 10, headMargin: 15,
+  cutMode: 'shape', bleed: 3, cutSource: 'auto', hideLines: true,
+  gapMode: 'auto', gapUnverified: 3, gapManual: 2, rot90: true, rot180: true, res: 'auto', sort: 'area', opt: 'bal',
+  regOn: true, regProfile: 'qcut', regDia: 5, regEdge: 10, regClear: 3, regMaxGap: 500, regPair: 20, feed: 'BR',
+  cutWidth: 0.25, jobName: ''
+};
+const LS = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
+let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings') || '{}')) };
+
+/* ---------------- durum ---------------- */
+const files = [];   // {id,name,size,bytes,doc(pdf-lib),js(pdf.js)}
+const items = [];   // her sayfa bir iş
+let layout = null;  // nest sonucu
+let curSheet = 0, view = 'print';
+let nestToken = 0;
+
+/* ---------------- matris ---------------- */
+const Mx = {
+  id: () => [1, 0, 0, 1, 0, 0],
+  mul: (a, b) => [a[0]*b[0]+a[1]*b[2], a[0]*b[1]+a[1]*b[3], a[2]*b[0]+a[3]*b[2], a[2]*b[1]+a[3]*b[3], a[4]*b[0]+a[5]*b[2]+b[4], a[4]*b[1]+a[5]*b[3]+b[5]],
+  ap: (m, x, y) => [m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]],
+  tr: (x, y) => [1, 0, 0, 1, x, y],
+  sc: (s) => [s, 0, 0, s, 0, 0],
+  rot: (r, w, h) => r === 90 ? [0, 1, -1, 0, h, 0] : r === 180 ? [-1, 0, 0, -1, w, h] : r === 270 ? [0, -1, 1, 0, 0, w] : [1, 0, 0, 1, 0, 0]
+};
+const bbUnion = (a, b) => !a ? b.slice() : [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+const bbInter = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+const bbExpand = (a, d) => [a[0]-d, a[1]-d, a[2]+d, a[3]+d];
+function subsBBox(subs) {
+  let b = null;
+  for (const sp of subs) for (const c of sp) { for (let i = 1; i + 1 < c.length; i += 2) b = bbUnion(b, [c[i], c[i+1], c[i], c[i+1]]); }
+  return b;
+}
+function transformSubs(subs, m) {
+  return subs.map(sp => sp.map(c => {
+    if (c[0] === 'Z') return c;
+    const o = [c[0]]; for (let i = 1; i < c.length; i += 2) { const p = Mx.ap(m, c[i], c[i+1]); o.push(p[0], p[1]); } return o;
+  }));
+}
+function path2d(subs, m) {
+  const p = new Path2D();
+  for (const sp of subs) for (const c of sp) {
+    if (c[0] === 'Z') { p.closePath(); continue }
+    const q = []; for (let i = 1; i < c.length; i += 2) q.push(...Mx.ap(m, c[i], c[i+1]));
+    if (c[0] === 'M') p.moveTo(q[0], q[1]); else if (c[0] === 'L') p.lineTo(q[0], q[1]); else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+  }
+  return p;
+}
+const rectSubs = r => [[['M', r[0], r[1]], ['L', r[2], r[1]], ['L', r[2], r[3]], ['L', r[0], r[3]], ['Z']]];
+
+/* ---------------- içerik akışı ayrıştırıcı ---------------- */
+const WS = new Uint8Array(256); [0, 9, 10, 12, 13, 32].forEach(c => WS[c] = 1);
+const DL = new Uint8Array(256); '()<>[]{}/%'.split('').forEach(c => DL[c.charCodeAt(0)] = 1);
+const td = new TextDecoder('latin1');
+function decName(b, s, e) {
+  let out = '';
+  for (let i = s; i < e; i++) {
+    if (b[i] === 35 && i + 2 < e) { out += String.fromCharCode(parseInt(td.decode(b.subarray(i+1, i+3)), 16)); i += 2; }
+    else out += String.fromCharCode(b[i]);
+  }
+  return out;
+}
+function parseContent(b, onOp) {
+  const n = b.length; let i = 0; const stack = []; const cont = [];
+  const push = v => (cont.length ? cont[cont.length-1] : stack).push(v);
+  while (i < n) {
+    const c = b[i];
+    if (WS[c]) { i++; continue }
+    if (c === 37) { while (i < n && b[i] !== 10 && b[i] !== 13) i++; continue }
+    if (c === 47) { let j = i + 1; while (j < n && !WS[b[j]] && !DL[b[j]]) j++; push({ n: decName(b, i+1, j) }); i = j; continue }
+    if (c === 40) { let d = 1, j = i + 1; while (j < n && d > 0) { const h = b[j]; if (h === 92) { j += 2; continue } if (h === 40) d++; else if (h === 41) d--; j++ } push({ s: 1 }); i = j; continue }
+    if (c === 60) {
+      if (b[i+1] === 60) { const a = []; a.isDict = true; cont.push(a); i += 2; continue }
+      let j = i + 1; while (j < n && b[j] !== 62) j++; push({ s: 1 }); i = j + 1; continue;
+    }
+    if (c === 62 && b[i+1] === 62) { const a = cont.pop() || []; const o = { d: {} }; for (let k = 0; k + 1 < a.length; k += 2) if (a[k] && a[k].n) o.d[a[k].n] = a[k+1]; push(o); i += 2; continue }
+    if (c === 91) { cont.push([]); i++; continue }
+    if (c === 93) { const a = cont.pop() || []; push(a); i++; continue }
+    if (c === 123 || c === 125 || c === 41 || c === 62) { i++; continue }
+    if ((c >= 48 && c <= 57) || c === 43 || c === 45 || c === 46) {
+      let j = i + 1; while (j < n && !WS[b[j]] && !DL[b[j]]) j++;
+      push(parseFloat(td.decode(b.subarray(i, j))) || 0); i = j; continue;
+    }
+    // anahtar kelime / operatör
+    let j = i + 1; while (j < n && !WS[b[j]] && !DL[b[j]]) j++;
+    const op = td.decode(b.subarray(i, j));
+    if (op === 'true' || op === 'false') { push(op === 'true'); i = j; continue }
+    if (op === 'null') { push(null); i = j; continue }
+    if (op === 'ID') { // satır içi görüntü verisini atla
+      let p = j + 1;
+      while (p < n - 1) { if (b[p] === 69 && b[p+1] === 73 && WS[b[p-1]] && (p + 2 >= n || WS[b[p+2]] || DL[b[p+2]])) break; p++; }
+      i = p + 2; stack.length = 0; cont.length = 0; continue;
+    }
+    cont.length = 0;
+    onOp(op, stack, i, j);
+    stack.length = 0; i = j;
+  }
+}
+
+/* ---------------- PDF yardımcıları ---------------- */
+const nm = s => PDFName.of(s);
+function pdfNameStr(o) { return o instanceof PDFName ? o.decodeText() : null }
+function pdfTextStr(o) { try { if (o instanceof PDFString || o instanceof PDFHexString) return o.decodeText(); } catch {} return null }
+function dictGet(d, k) { if (!(d instanceof PDFDict)) return undefined; try { return d.lookup(nm(k)) } catch { return undefined } }
+function streamBytes(s) {
+  if (s instanceof PDFRawStream) return decodePDFRawStream(s).decode();
+  if (s && typeof s.getContents === 'function') return s.getContents();
+  return new Uint8Array(0);
+}
+function concatBytes(arrs) {
+  let len = 0; for (const a of arrs) len += a.length + 1;
+  const out = new Uint8Array(len); let o = 0;
+  for (const a of arrs) { out.set(a, o); o += a.length; out[o++] = 10; }
+  return out;
+}
+function applyReps(bytes, reps) {
+  reps.sort((a, b) => a[0] - b[0]);
+  const parts = []; let last = 0; const te = new TextEncoder();
+  for (const [s, e, t] of reps) { parts.push(bytes.subarray(last, s)); parts.push(te.encode(t)); last = e; }
+  parts.push(bytes.subarray(last));
+  let len = 0; for (const p of parts) len += p.length;
+  const out = new Uint8Array(len); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+function csInfo(name, res, depth = 0) {
+  if (!name) return { t: 'gray' };
+  if (['DeviceGray', 'G', 'CalGray'].includes(name)) return { t: 'gray' };
+  if (['DeviceRGB', 'RGB', 'CalRGB'].includes(name)) return { t: 'rgb' };
+  if (['DeviceCMYK', 'CMYK'].includes(name)) return { t: 'cmyk' };
+  if (name === 'Pattern' || depth > 4) return { t: 'other' };
+  const csd = dictGet(res, 'ColorSpace');
+  const v = dictGet(csd, name);
+  return csFromObj(v, res, depth);
+}
+function csFromObj(v, res, depth) {
+  if (v instanceof PDFName) return csInfo(v.decodeText(), res, depth + 1);
+  if (v instanceof PDFArray) {
+    const kind = pdfNameStr(v.lookup(0));
+    if (kind === 'ICCBased') { const s = v.lookup(1); const N = s && s.dict ? s.dict.lookup(nm('N')) : null; const nn = N instanceof PDFNumber ? N.asNumber() : 3; return { t: nn === 4 ? 'cmyk' : nn === 1 ? 'gray' : 'rgb' } }
+    if (kind === 'Separation') return { t: 'sep', name: pdfNameStr(v.lookup(1)) || '' };
+    if (kind === 'DeviceN') { const a = v.lookup(1); const names = a instanceof PDFArray ? a.asArray().map(x => pdfNameStr(x) || '') : []; return { t: 'devn', names } }
+    if (kind === 'CalRGB' || kind === 'Lab') return { t: 'rgb' };
+    if (kind === 'CalGray') return { t: 'gray' };
+    return { t: 'other' };
+  }
+  return { t: 'other' };
+}
+const RX_CUT = /cut|kesim|kontur|contour|thru|kiss|stanz|plot/i;
+const RX_BLEED = /bleed|tasma|taşma/i;
+function classify(gs, layers, src) {
+  const lay = layers.filter(Boolean).join('|');
+  if (lay) { if (RX_BLEED.test(lay)) return 'bleed'; if (RX_CUT.test(lay)) return 'cut'; }
+  const cs = gs.scs, v = gs.sc || [];
+  if (cs.t === 'sep') { if (RX_BLEED.test(cs.name)) return 'bleed'; if (RX_CUT.test(cs.name) && (v[0] ?? 1) > 0.05) return src === 'red' ? null : 'cut'; return null }
+  if (cs.t === 'devn') { if (cs.names.some((nmx, i) => RX_CUT.test(nmx) && (v[i] ?? 0) > 0.05)) return src === 'red' ? null : 'cut'; return null }
+  if (src === 'layer') return null;
+  let r, g, b;
+  if (cs.t === 'cmyk' && v.length >= 4) {
+    const [C, M, Y, K] = v;
+    if (C < 0.15 && K < 0.15 && M > 0.85 && Y > 0.85) return src === 'magenta' ? null : 'cut';
+    if (C < 0.15 && K < 0.15 && M > 0.85 && Y < 0.15) return src === 'red' ? null : 'cut';
+    if (C < 0.15 && K < 0.15 && M > 0.3 && M < 0.7 && Y > 0.3 && Y < 0.7) return 'bleed';
+    return null;
+  }
+  if (cs.t === 'rgb' && v.length >= 3) { [r, g, b] = v; }
+  else return null;
+  if (r > 0.85 && g < 0.25 && b < 0.25) return src === 'magenta' ? null : 'cut';
+  if (r > 0.85 && g < 0.25 && b > 0.75) return src === 'red' ? null : 'cut';
+  if (r > 0.85 && g > 0.35 && g < 0.75 && b > 0.35 && b < 0.75 && Math.abs(g - b) < 0.15) return 'bleed';
+  return null;
+}
+const STROKE_REPL = { S: 'n', s: 'n', B: 'f', 'B*': 'f*', b: 'h f', 'b*': 'h f*' };
+const PAINT = new Set(['S', 's', 'f', 'F', 'f*', 'B', 'B*', 'b', 'b*', 'n']);
+
+function interpret(bytes, res, ctm0, gs0, layers0, ctx) {
+  const reps = [];
+  let gs = { ctm: ctm0, scs: gs0.scs, sc: gs0.sc };
+  const gstack = []; const layers = layers0.slice();
+  let path = [], sub = null, cp = [0, 0], start = [0, 0];
+  const T = (x, y) => Mx.ap(gs.ctm, x, y);
+  parseContent(bytes, (op, a, s, e) => {
+    switch (op) {
+      case 'q': gstack.push(gs); gs = { ...gs }; break;
+      case 'Q': if (gstack.length) gs = gstack.pop(); break;
+      case 'cm': if (a.length >= 6) gs.ctm = Mx.mul(a.slice(-6), gs.ctm); break;
+      case 'CS': { const csn = a[0] && a[0].n; gs.scs = csInfo(csn, res); gs.sc = gs.scs.t === 'cmyk' ? [0, 0, 0, 1] : gs.scs.t === 'sep' ? [1] : [0, 0, 0]; break }
+      case 'SC': case 'SCN': gs.sc = a.filter(x => typeof x === 'number'); break;
+      case 'G': gs.scs = { t: 'gray' }; gs.sc = [a[0]]; break;
+      case 'RG': gs.scs = { t: 'rgb' }; gs.sc = a.slice(0, 3); break;
+      case 'K': gs.scs = { t: 'cmyk' }; gs.sc = a.slice(0, 4); break;
+      case 'm': { const p = T(a[0], a[1]); sub = [['M', p[0], p[1]]]; path.push(sub); cp = p; start = p; break }
+      case 'l': { const p = T(a[0], a[1]); if (!sub) { sub = [['M', cp[0], cp[1]]]; path.push(sub) } sub.push(['L', p[0], p[1]]); cp = p; break }
+      case 'c': { const p1 = T(a[0], a[1]), p2 = T(a[2], a[3]), p3 = T(a[4], a[5]); if (!sub) { sub = [['M', cp[0], cp[1]]]; path.push(sub) } sub.push(['C', ...p1, ...p2, ...p3]); cp = p3; break }
+      case 'v': { const p2 = T(a[0], a[1]), p3 = T(a[2], a[3]); if (!sub) { sub = [['M', cp[0], cp[1]]]; path.push(sub) } sub.push(['C', ...cp, ...p2, ...p3]); cp = p3; break }
+      case 'y': { const p1 = T(a[0], a[1]), p3 = T(a[2], a[3]); if (!sub) { sub = [['M', cp[0], cp[1]]]; path.push(sub) } sub.push(['C', ...p1, ...p3, ...p3]); cp = p3; break }
+      case 'h': if (sub) { sub.push(['Z']); cp = start; } break;
+      case 're': {
+        const [x, y, w, h] = a; const p0 = T(x, y), p1 = T(x + w, y), p2 = T(x + w, y + h), p3 = T(x, y + h);
+        path.push([['M', ...p0], ['L', ...p1], ['L', ...p2], ['L', ...p3], ['Z']]); sub = null; cp = p0; break;
+      }
+      case 'BDC': {
+        let name = null;
+        if (a[0] && a[0].n === 'OC') {
+          if (a[1] && a[1].n) { const props = dictGet(res, 'Properties'); const ocg = dictGet(props, a[1].n); const nmo = dictGet(ocg, 'Name'); name = pdfTextStr(nmo); }
+        }
+        layers.push(name); break;
+      }
+      case 'BMC': layers.push(null); break;
+      case 'EMC': layers.pop(); break;
+      case 'Do': {
+        if (ctx.depth > 12 || !a[0] || !a[0].n) break;
+        const xd = dictGet(res, 'XObject'); if (!(xd instanceof PDFDict)) break;
+        const raw = xd.get(nm(a[0].n)); const st = raw instanceof PDFRef ? ctx.doc.context.lookup(raw) : raw;
+        if (!(st instanceof PDFStream) || pdfNameStr(st.dict.lookup(nm('Subtype'))) !== 'Form') break;
+        let fb = ctx.cache.get(st); if (!fb) { try { fb = streamBytes(st) } catch { fb = new Uint8Array(0) } ctx.cache.set(st, fb); }
+        const mat = st.dict.lookup(nm('Matrix'));
+        const fm = mat instanceof PDFArray ? mat.asArray().map(x => x instanceof PDFNumber ? x.asNumber() : 0) : Mx.id();
+        const fres = st.dict.lookup(nm('Resources')); const r2 = fres instanceof PDFDict ? fres : res;
+        ctx.depth++;
+        const sub2 = interpret(fb, r2, Mx.mul(fm, gs.ctm), gs, layers, ctx);
+        ctx.depth--;
+        if (sub2.length && raw instanceof PDFRef && !ctx.forms.has(raw.toString())) {
+          ctx.forms.set(raw.toString(), true);
+          ctx.out.rewrites.push({ kind: 'form', ref: raw, orig: st, bytes: applyReps(fb.slice(), sub2) });
+        }
+        break;
+      }
+      default:
+        if (PAINT.has(op)) {
+          if (STROKE_REPL[op] && path.length) {
+            const cls = classify(gs, layers, ctx.src);
+            if (cls === 'cut') { for (const sp of path) { const c = sp.slice(); if (op === 's' || op === 'b' || op === 'b*') c.push(['Z']); ctx.out.cut.push(c) } reps.push([s, e, STROKE_REPL[op]]); }
+            else if (cls === 'bleed') { const bb = subsBBox(path); if (bb) ctx.out.bleed.push(bb); reps.push([s, e, STROKE_REPL[op]]); }
+          }
+          path = []; sub = null;
+        }
+    }
+  });
+  return reps;
+}
+function analyzePage(doc, page, src) {
+  const out = { cut: [], bleed: [], rewrites: [] };
+  const ctx = { doc, out, cache: new Map(), forms: new Map(), depth: 0, src };
+  const res = page.node.Resources();
+  const C = page.node.Contents();
+  let arrs = [];
+  if (C instanceof PDFArray) { for (let i = 0; i < C.size(); i++) { const s = C.lookup(i); if (s instanceof PDFStream) arrs.push(streamBytes(s)) } }
+  else if (C instanceof PDFStream) arrs.push(streamBytes(C));
+  const bytes = concatBytes(arrs);
+  const reps = interpret(bytes, res, Mx.id(), { scs: { t: 'gray' }, sc: [0] }, [], ctx);
+  if (reps.length) out.rewrites.push({ kind: 'page', page, orig: page.node.get(nm('Contents')), bytes: applyReps(bytes.slice(), reps) });
+  return out;
+}
+function setRewrites(item, on) {
+  for (const rw of item.an.rewrites) {
+    const ctx = item.file.doc.context;
+    if (rw.kind === 'page') {
+      if (on) { if (!rw.newRef) { const d = ctx.obj({}); rw.newRef = ctx.register(PDFRawStream.of(d, rw.bytes)); } rw.page.node.set(nm('Contents'), rw.newRef); }
+      else rw.page.node.set(nm('Contents'), rw.orig);
+    } else {
+      if (on) { if (!rw.newStream) { const d = rw.orig.dict.clone(ctx); d.delete(nm('Filter')); d.delete(nm('DecodeParms')); rw.newStream = PDFRawStream.of(d, rw.bytes); } ctx.assign(rw.ref, rw.newStream); }
+      else ctx.assign(rw.ref, rw.orig);
+    }
+  }
+}
+
+/* ---------------- offset poligon (raster tabanlı) ---------------- */
+function traceMask(mask, W, H) {
+  // piksel kenarlarını izler; dolu piksel saat yönünde (y aşağı) çevrelenir
+  const out = new Map(); const key = (x, y) => y * (W + 1) + x;
+  const add = (x1, y1, x2, y2) => { const k = key(x1, y1); let l = out.get(k); if (!l) out.set(k, l = []); l.push(key(x2, y2)); };
+  const at = (x, y) => x >= 0 && y >= 0 && x < W && y < H && mask[y * W + x];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!mask[y * W + x]) continue;
+    if (!at(x, y - 1)) add(x, y, x + 1, y);
+    if (!at(x + 1, y)) add(x + 1, y, x + 1, y + 1);
+    if (!at(x, y + 1)) add(x + 1, y + 1, x, y + 1);
+    if (!at(x - 1, y)) add(x, y + 1, x, y);
+  }
+  const loops = [];
+  for (const [k0, l0] of out) {
+    while (l0.length) {
+      const loop = []; let k = k0; let guard = 0;
+      while (guard++ < 5e6) {
+        const l = out.get(k); if (!l || !l.length) break;
+        const nk = l.pop(); loop.push([k % (W + 1), Math.floor(k / (W + 1))]); k = nk;
+        if (k === k0) break;
+      }
+      if (loop.length > 2) loops.push(loop);
+    }
+  }
+  return loops;
+}
+function rdp(pts, eps) {
+  if (pts.length < 4) return pts;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const st = [[0, pts.length - 1]];
+  while (st.length) {
+    const [a, b] = st.pop(); let dm = 0, im = -1;
+    const [ax, ay] = pts[a], [bx, by] = pts[b]; const dx = bx - ax, dy = by - ay; const L = Math.hypot(dx, dy) || 1e-9;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + bx * ay - by * ax) / L; if (d > dm) { dm = d; im = i } }
+    if (dm > eps && im > 0) { keep[im] = 1; st.push([a, im], [im, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+function offsetPolygon(subs, offPt, clipRect) {
+  // subs: sayfa pt; offPt: pt cinsinden taşma; dönüş: [[x,y]...] halkalar (sayfa pt)
+  let bb = subsBBox(subs); if (!bb) return null;
+  bb = bbExpand(bb, offPt + 2);
+  if (clipRect) bb = bbInter(bb, bbExpand(clipRect, 2));
+  const wPt = bb[2] - bb[0], hPt = bb[3] - bb[1];
+  let k = 5 / PT; // ~0.2 mm
+  const maxDim = 2600; if (Math.max(wPt, hPt) * k > maxDim) k = maxDim / Math.max(wPt, hPt);
+  const W = Math.max(4, Math.ceil(wPt * k)), H = Math.max(4, Math.ceil(hPt * k));
+  const cv = new OffscreenCanvas(W, H); const c = cv.getContext('2d');
+  const m = [k, 0, 0, -k, -bb[0] * k, bb[3] * k];
+  if (clipRect) { const r = new Path2D(); const p0 = Mx.ap(m, clipRect[0], clipRect[3]), p1 = Mx.ap(m, clipRect[2], clipRect[1]); r.rect(p0[0], p0[1], p1[0] - p0[0], p1[1] - p0[1]); c.clip(r); }
+  const p = path2d(subs, m);
+  c.fillStyle = '#000'; c.strokeStyle = '#000'; c.fill(p, 'nonzero');
+  if (offPt > 0) { c.lineWidth = 2 * offPt * k; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(p); }
+  const data = c.getImageData(0, 0, W, H).data; const mask = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) mask[i] = data[i * 4 + 3] > 110 ? 1 : 0;
+  const simplifyLoop = l => {
+    let far = 0, dm = -1; for (let i = 1; i < l.length; i++) { const d = (l[i][0] - l[0][0]) ** 2 + (l[i][1] - l[0][1]) ** 2; if (d > dm) { dm = d; far = i } }
+    const a = rdp(l.slice(0, far + 1), 1.1), b = rdp(l.slice(far).concat([l[0]]), 1.1);
+    return a.concat(b.slice(1, -1));
+  };
+  const loops = traceMask(mask, W, H).map(simplifyLoop);
+  const inv = [1 / k, 0, 0, -1 / k, bb[0], bb[3]];
+  return loops.filter(l => l.length >= 3).map(l => l.map(([x, y]) => Mx.ap(inv, x, y)));
+}
+function polysToSubs(polys) { return polys.map(l => [['M', l[0][0], l[0][1]], ...l.slice(1).map(p => ['L', p[0], p[1]]), ['Z']]) }
+function polyArea(polys) { let A = 0; for (const l of polys) { let a = 0; for (let i = 0; i < l.length; i++) { const p = l[i], q = l[(i + 1) % l.length]; a += p[0] * q[1] - q[0] * p[1]; } A += a / 2; } return Math.abs(A); }
+
+/* ---------------- dosya yükleme ---------------- */
+let uid = 0;
+async function addFiles(list) {
+  const errBox = $('#fileErr'); errBox.innerHTML = '';
+  const err = t => { const d = document.createElement('div'); d.textContent = t; errBox.appendChild(d); };
+  const all = [...(list || [])];
+  if (!all.length) { err('Dosya alınamadı. Lütfen "Dosya seç" ile tekrar deneyin.'); return }
+  let total = files.reduce((s, f) => s + f.size, 0), ok = 0;
+  for (const f of all) {
+    if (f.size > 250 * 1024 * 1024) { err(`${f.name}: tek dosya 250 MB'ı geçemez.`); continue }
+    if (total + f.size > 400 * 1024 * 1024) { err('İş toplamı 400 MB sınırını aşıyor.'); break }
+    setStatus(`${f.name} okunuyor…`, 'busy');
+    let bytes;
+    try { bytes = new Uint8Array(await f.arrayBuffer()); } catch (e) { err(`${f.name}: dosya okunamadı (${e.message || e}).`); continue }
+    const head = new TextDecoder('latin1').decode(bytes.subarray(0, 1024));
+    if (!head.includes('%PDF')) { err(`${f.name}: PDF değil. Illustrator dosyasını "PDF uyumlu dosya oluştur" seçeneğiyle ya da PDF olarak kaydedin.`); continue }
+    total += f.size;
+    try { await loadPdf(f.name, bytes, f.size); ok++; }
+    catch (e) { console.error(e); err(`${f.name} açılamadı: ${e.message || e}`); }
+  }
+  setStatus(ok ? 'Yerleşim hesaplanıyor…' : (items.length ? 'Hazır' : 'PDF bekleniyor'), ok ? 'busy' : '');
+  renderItems(); scheduleNest(50);
+}
+async function loadPdf(name, bytes, size, qtys) {
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+  let js = null;
+  try { js = await pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise; } catch (e) { console.warn('pdf.js', e); }
+  const file = { id: ++uid, name, size: size || bytes.length, doc, js };
+  files.push(file);
+  const pages = doc.getPages();
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const cb = page.getCropBox(), mb = page.getMediaBox();
+    const crop = bbInter([cb.x, cb.y, cb.x + cb.width, cb.y + cb.height], [mb.x, mb.y, mb.x + mb.width, mb.y + mb.height]);
+    const tbx = page.getTrimBox(); const trim = bbInter([tbx.x, tbx.y, tbx.x + tbx.width, tbx.y + tbx.height], crop);
+    const it = { id: ++uid, file, pageIndex: i, page, name: pages.length > 1 ? `${name} · s.${i + 1}` : name, pageBox: crop, trimBox: trim,
+      qty: qtys ? (qtys[i] || 1) : 1, scale: 100, rotate: true, an: null, geom: null, thumb: null };
+    it.an = safeAnalyze(it);
+    items.push(it);
+    await renderThumb(it);
+  }
+}
+function safeAnalyze(it) {
+  try { return analyzePage(it.file.doc, it.page, S.cutSource) }
+  catch (e) { console.warn('analiz', e); return { cut: [], bleed: [], rewrites: [], err: String(e) } }
+}
+async function renderThumb(it) {
+  try { await renderThumbJs(it) } catch (e) { console.warn('thumb', e); const pb = it.pageBox; const k = Math.min(3, 900 / Math.max(pb[2] - pb[0], pb[3] - pb[1])); const cv = document.createElement('canvas'); cv.width = Math.ceil((pb[2] - pb[0]) * k); cv.height = Math.ceil((pb[3] - pb[1]) * k); const c = cv.getContext('2d'); c.fillStyle = '#e9e9ec'; c.fillRect(0, 0, cv.width, cv.height); it.thumb = { cv, ppp: k, view: pb.slice() }; }
+}
+async function renderThumbJs(it) {
+  if (!it.file.js) throw new Error('no pdfjs');
+  const pg = await it.file.js.getPage(it.pageIndex + 1);
+  const v0 = pg.getViewport({ scale: 1, rotation: 0 });
+  const scale = Math.min(6, 1100 / Math.max(v0.width, v0.height));
+  const vp = pg.getViewport({ scale, rotation: 0 });
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+  const c = cv.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+  await pg.render({ canvasContext: c, canvas: cv, viewport: vp }).promise;
+  it.thumb = { cv, ppp: scale, view: pg.view.slice() };
+}
+
+/* ---------------- geometri ---------------- */
+function geomKey(it) { return [S.cutMode, S.bleed, S.cutSource, S.gapMode, S.gapUnverified, S.gapManual, it.scale].join('|') }
+function computeGeom(it) {
+  const key = geomKey(it); if (it.geom && it.geom.key === key) return it.geom;
+  const s = it.scale / 100; const bPt = S.bleed * PT / s;
+  const an = it.an; const pb = it.pageBox;
+  const bleedBox = an.bleed.length ? an.bleed.reduce((a, b) => ((b[2] - b[0]) * (b[3] - b[1]) > (a[2] - a[0]) * (a[3] - a[1]) ? b : a)) : null;
+  const cutBB = an.cut.length ? subsBBox(an.cut) : null;
+  const g = { key, s, mode: 'rect', poly: null, cut: null, clipRect: null, frame: null, verified: false, area: 0, note: '' };
+  const within = (inner, outer, tol = 0.5) => inner[0] >= outer[0] - tol && inner[1] >= outer[1] - tol && inner[2] <= outer[2] + tol && inner[3] <= outer[3] + tol;
+  if (S.cutMode === 'shape' && an.cut.length) {
+    g.mode = 'shape';
+    g.clipRect = bleedBox ? bbInter(bleedBox, pb) : pb;
+    g.cut = an.cut;
+    g.verified = !!bleedBox || within(bbExpand(cutBB, bPt), pb, 0.3);
+    g.poly = offsetPolygon(an.cut, bPt, g.clipRect);
+    if (!g.poly || !g.poly.length) { g.mode = 'rect'; }
+    else {
+      let fb = null; for (const l of g.poly) for (const p of l) fb = bbUnion(fb, [p[0], p[1], p[0], p[1]]);
+      g.frame = bbInter(fb, g.clipRect);
+      g.area = polyArea(g.poly) * s * s;
+    }
+  }
+  if (g.mode === 'rect') {
+    g.poly = null;
+    if (bleedBox) {
+      g.frame = bbInter(bleedBox, pb);
+      const cr = cutBB && within(cutBB, g.frame) && (cutBB[2] - cutBB[0]) > 2 * bPt ? cutBB : bbExpand(g.frame, -bPt);
+      g.cut = rectSubs(cr); g.verified = true;
+    } else if (cutBB) {
+      const fr = bbExpand(cutBB, bPt); g.frame = bbInter(fr, pb); g.cut = rectSubs(cutBB);
+      g.verified = within(fr, pb, 0.3);
+    } else {
+      const tb = it.trimBox; const hasTrim = tb && (tb[0] - pb[0] > 1 || pb[2] - tb[2] > 1);
+      g.frame = pb.slice(); g.cut = rectSubs(hasTrim ? tb : pb); g.verified = !!hasTrim; g.note = hasTrim ? 'TrimBox' : 'sayfa kenarı';
+    }
+    g.clipRect = g.frame;
+    g.area = (g.frame[2] - g.frame[0]) * (g.frame[3] - g.frame[1]) * s * s;
+  }
+  g.wPt = (g.frame[2] - g.frame[0]) * s; g.hPt = (g.frame[3] - g.frame[1]) * s;
+  g.wMm = g.wPt / PT; g.hMm = g.hPt / PT; g.areaMm = g.area / PT / PT;
+  g.gap = S.gapMode === 'manual' ? S.gapManual : (g.verified ? 0 : S.gapUnverified);
+  g.skip = S.gapMode === 'verified' && !g.verified;
+  g.masks = {};
+  it.geom = g; return g;
+}
+function placeMatrix(it, rot, Xpt, Ypt) {
+  const g = it.geom;
+  return Mx.mul(Mx.mul(Mx.mul(Mx.tr(-g.frame[0], -g.frame[1]), Mx.sc(g.s)), Mx.rot(rot, g.wPt, g.hPt)), Mx.tr(Xpt, Ypt));
+}
+function rotDims(g, rot) { return (rot === 90 || rot === 270) ? [g.wMm, g.hMm].reverse() : [g.wMm, g.hMm] }
+
+/* ---------------- maske (şekil yerleşimi) ---------------- */
+function getMask(it, rot, res) {
+  const g = it.geom; const k = rot + '@' + res + '@' + g.gap;
+  if (g.masks[k]) return g.masks[k];
+  const [wMm, hMm] = rotDims(g, rot); const pad = g.gap / 2;
+  const cw = Math.max(1, Math.ceil((wMm + 2 * pad) / res)), ch = Math.max(1, Math.ceil((hMm + 2 * pad) / res));
+  const bottom = new Int32Array(cw), top = new Int32Array(cw);
+  if (g.mode !== 'shape') { bottom.fill(0); top.fill(ch); }
+  else {
+    const cv = new OffscreenCanvas(cw, ch); const c = cv.getContext('2d');
+    // sayfa pt -> yerel mm -> hücre (y aşağı)
+    const toCell = Mx.mul(Mx.mul(placeMatrix(it, rot, pad * PT, pad * PT), Mx.sc(1 / (PT * res))), [1, 0, 0, -1, 0, ch]);
+    const cr = g.clipRect; c.save();
+    const rp = path2d(rectSubs(cr), toCell); c.clip(rp);
+    const p = path2d(polysToSubs(g.poly), toCell);
+    c.fillStyle = '#000'; c.strokeStyle = '#000'; c.fill(p, 'evenodd');
+    c.restore();
+    if (pad > 0) { c.lineWidth = 2 * pad / res; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(p); }
+    else { c.lineWidth = 0.6; c.stroke(p); }
+    const d = c.getImageData(0, 0, cw, ch).data;
+    var colRuns = new Array(cw);
+    for (let x = 0; x < cw; x++) {
+      const rr = []; let inRun = false;
+      for (let row = 0; row < ch; row++) { const on = d[((ch - 1 - row) * cw + x) * 4 + 3] > 0; if (on && !inRun) { rr.push(row); inRun = true } else if (!on && inRun) { rr.push(row); inRun = false } }
+      if (inRun) rr.push(ch); colRuns[x] = rr;
+    }
+    for (let x = 0; x < cw; x++) {
+      let lo = -1, hi = -1;
+      for (let y = 0; y < ch; y++) if (d[(y * cw + x) * 4 + 3] > 0) { const row = ch - 1 - y; if (hi < 0) hi = row + 1; lo = row; }
+      bottom[x] = lo < 0 ? -1 : lo; top[x] = lo < 0 ? -1 : hi;
+    }
+  }
+  let mt = 0; for (let x = 0; x < cw; x++) if (top[x] > mt) mt = top[x];
+  return g.masks[k] = { cw, ch, bottom, top, maxTop: mt, pad, colRuns: typeof colRuns !== 'undefined' ? colRuns : null };
+}
+
+/* ---------------- nest ---------------- */
+function rotationsFor(it) {
+  const r = [0]; if (S.rot180) r.push(180);
+  if (S.rot90 && it.rotate) { r.push(90); if (S.rot180) r.push(270); }
+  return r;
+}
+function mediaDims() {
+  const regZone = S.regOn ? S.regEdge + S.regDia / 2 + S.regClear : 0;
+  const side = Math.max(S.sideMargin, regZone), head = Math.max(S.headMargin, regZone);
+  const W = S.mediaW * 10, usableW = W - 2 * side;
+  const L = S.media === 'roll' ? S.maxLen * 10 : S.sheetH * 10;
+  return { W, side, head, usableW, maxUsableL: L - 2 * head, L };
+}
+function sortInst(inst, mode) {
+  const a = inst.slice();
+  const key = mode === 'long' ? i => Math.max(i.it.geom.wMm, i.it.geom.hMm) : mode === 'short' ? i => Math.min(i.it.geom.wMm, i.it.geom.hMm) * 1e4 + i.it.geom.areaMm / 1e4 : mode === 'perim' ? i => i.it.geom.wMm + i.it.geom.hMm : i => i.it.geom.areaMm;
+  if (mode !== 'order') a.sort((x, y) => key(y) - key(x) || x.idx - y.idx);
+  return a;
+}
+function buildInstances(warns) {
+  const inst = [];
+  items.forEach((it, idx) => {
+    const g = computeGeom(it);
+    if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
+    if (S.cutMode === 'shape' && g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: kesim çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
+    if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
+    for (let q = 0; q < it.qty; q++) inst.push({ it, idx, q });
+  });
+  return inst;
+}
+const SCORES = { top: (tp, y, x) => tp + x * 1e-7, mix: (tp, y, x) => tp * 0.7 + y * 0.3 + x * 1e-7, center: (tp, y, x) => (tp + y) / 2 + x * 1e-7 };
+function maskRuns(m) {
+  if (m.runs) return m.runs;
+  const runs = new Array(m.cw);
+  for (let c = 0; c < m.cw; c++) runs[c] = m.colRuns ? m.colRuns[c] : (m.bottom[c] < 0 ? [] : [m.bottom[c], m.top[c]]);
+  return m.runs = runs;
+}
+// sütun başına dolu aralıklar [s,e,s,e,...] sıralı
+function firstOverlap(col, a) { // e > a olan ilk aralığın indeksi (çift)
+  let lo = 0, hi = col.length >> 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (col[2 * mid + 1] > a) hi = mid; else lo = mid + 1; }
+  return lo * 2;
+}
+function lowestY(cols, x, m, runs, Lc) {
+  const cw = m.cw; let y = 0, c = 0, ok = 0;
+  while (ok < cw) {
+    if (y + m.maxTop > Lc) return -1;
+    const r = runs[c]; let hit = false;
+    if (r.length) {
+      const col = cols[x + c];
+      for (let k = 0; k < r.length && !hit; k += 2) {
+        const a = y + r[k], b = y + r[k + 1];
+        const i = firstOverlap(col, a);
+        if (i < col.length && col[i] < b) { y = col[i + 1] - r[k]; hit = true; }
+      }
+    }
+    if (hit) ok = 0; else ok++;
+    c = c + 1 === cw ? 0 : c + 1;
+  }
+  return y;
+}
+function insertRun(col, s, e) {
+  let i = firstOverlap(col, s - 1);
+  let ns = s, ne = e, j = i;
+  while (j < col.length && col[j] <= e) { ns = Math.min(ns, col[j]); ne = Math.max(ne, col[j + 1]); j += 2; }
+  col.splice(i, j - i, ns, ne);
+}
+async function nestShapes(inst, md, token, prog, SCORE = SCORES.top, fixedRes) {
+  let res = fixedRes || (S.res === 'auto' ? null : +S.res);
+  if (!res) {
+    const avgW = inst.reduce((s, i) => s + Math.max(i.it.geom.wMm, i.it.geom.hMm), 0) / Math.max(1, inst.length);
+    const rots = (S.rot90 ? 2 : 1) * (S.rot180 ? 2 : 1);
+    for (const r of [0.5, 1, 2, 3, 4, 6]) { const ops = inst.length * rots * (md.usableW / r) * (avgW / r) * 2.5; res = r; if (ops < 2.5e8) break; }
+  }
+  const Wc = Math.floor(md.usableW / res), Lc = Math.floor(md.maxUsableL / res);
+  const sheets = []; const unplaced = []; let t0 = performance.now();
+  const newSheet = () => ({ cols: Array.from({ length: Wc }, () => []), pl: [] });
+  for (let n = 0; n < inst.length; n++) {
+    if (token !== nestToken) return null;
+    if (performance.now() - t0 > 40) { prog(n / inst.length); await sleep(0); t0 = performance.now(); }
+    const { it } = inst[n];
+    const cands = rotationsFor(it).map(r => { const m = getMask(it, r, res); return { r, m, runs: maskRuns(m) } }).filter(c => c.m.cw <= Wc && c.m.maxTop <= Lc);
+    if (!cands.length) { unplaced.push(inst[n]); continue }
+    let placed = false;
+    for (let si = 0; si <= sheets.length && !placed; si++) {
+      if (si === sheets.length) sheets.push(newSheet());
+      const sh = sheets[si]; let best = null;
+      for (const { r, m, runs } of cands) {
+        for (let x = 0; x + m.cw <= Wc; x++) {
+          const y = lowestY(sh.cols, x, m, runs, Lc); if (y < 0) continue;
+          const sc = SCORE(y + m.maxTop, y, x);
+          if (!best || sc < best.sc) best = { sc, x, y, r, m, runs };
+        }
+      }
+      if (best) {
+        const { x, y, r, m, runs } = best;
+        for (let c = 0; c < m.cw; c++) { const rr = runs[c]; for (let k = 0; k < rr.length; k += 2) insertRun(sh.cols[x + c], y + rr[k], y + rr[k + 1]); }
+        sh.pl.push({ it, rot: r, x: x * res + m.pad, y: y * res + m.pad });
+        placed = true;
+      } else if (si === sheets.length - 1 && !sh.pl.length) { sheets.pop(); break; }
+    }
+    if (!placed) unplaced.push(inst[n]);
+  }
+  return { sheets: sheets.filter(s => s.pl.length).map(s => ({ pl: s.pl, usedL: Math.max(...s.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1] + p.it.geom.gap / 2), 0) })), unplaced, res };
+}
+async function nestRects(inst, md, token, prog, heur) {
+  const gMax = Math.max(0, ...inst.map(i => i.it.geom.gap));
+  const BW = md.usableW + gMax, BH = md.maxUsableL + gMax;
+  const roll = heur ? heur === 'bl' : S.media === 'roll';
+  const bins = []; const unplaced = []; let t0 = performance.now();
+  const newBin = () => ({ free: [{ x: 0, y: 0, w: BW, h: BH }], pl: [] });
+  function find(bin, it) {
+    const g = it.geom; let best = null;
+    for (const r of rotationsFor(it).filter(r => r === 0 || r === 90)) {
+      const [w, h] = rotDims(g, r); const pw = w + g.gap, ph = h + g.gap;
+      for (const f of bin.free) {
+        if (pw > f.w + 1e-6 || ph > f.h + 1e-6) continue;
+        if (f.x + w > md.usableW + 1e-6 || f.y + h > md.maxUsableL + 1e-6) continue;
+        const s1 = roll ? f.y + ph : Math.min(f.w - pw, f.h - ph), s2 = roll ? f.x : Math.max(f.w - pw, f.h - ph);
+        if (!best || s1 < best.s1 - 1e-6 || (Math.abs(s1 - best.s1) < 1e-6 && s2 < best.s2)) best = { s1, s2, x: f.x, y: f.y, w: pw, h: ph, r };
+      }
+    }
+    return best;
+  }
+  function place(bin, p) {
+    const nf = [];
+    for (const f of bin.free) {
+      if (p.x >= f.x + f.w || p.x + p.w <= f.x || p.y >= f.y + f.h || p.y + p.h <= f.y) { nf.push(f); continue }
+      if (p.x > f.x) nf.push({ x: f.x, y: f.y, w: p.x - f.x, h: f.h });
+      if (p.x + p.w < f.x + f.w) nf.push({ x: p.x + p.w, y: f.y, w: f.x + f.w - p.x - p.w, h: f.h });
+      if (p.y > f.y) nf.push({ x: f.x, y: f.y, w: f.w, h: p.y - f.y });
+      if (p.y + p.h < f.y + f.h) nf.push({ x: f.x, y: p.y + p.h, w: f.w, h: f.y + f.h - p.y - p.h });
+    }
+    bin.free = nf.filter((a, i) => !nf.some((b, j) => j !== i && a.x >= b.x - 1e-9 && a.y >= b.y - 1e-9 && a.x + a.w <= b.x + b.w + 1e-9 && a.y + a.h <= b.y + b.h + 1e-9 && (j < i || !(a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h))));
+  }
+  for (let n = 0; n < inst.length; n++) {
+    if (token !== nestToken) return null;
+    if (performance.now() - t0 > 40) { prog(n / inst.length); await sleep(0); t0 = performance.now(); }
+    const { it } = inst[n]; let done = false;
+    for (const bin of bins) { const p = find(bin, it); if (p) { place(bin, p); bin.pl.push({ it, rot: p.r, x: p.x, y: p.y }); done = true; break } }
+    if (!done) { const bin = newBin(); const p = find(bin, it); if (p) { place(bin, p); bin.pl.push({ it, rot: p.r, x: p.x, y: p.y }); bins.push(bin); } else unplaced.push(inst[n]); }
+  }
+  return { sheets: bins.map(b => ({ pl: b.pl, usedL: Math.max(...b.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1]), 0) })), unplaced, res: 0 };
+}
+function regMarks(W, L) {
+  if (!S.regOn) return [];
+  const e = S.regEdge, marks = [];
+  const bottomFeed = S.feed[0] === 'B', rightFeed = S.feed[1] === 'R';
+  const y0 = e, y1 = L - e; const span = y1 - y0;
+  const nSeg = Math.max(1, Math.ceil(span / S.regMaxGap)); const rows = [];
+  for (let i = 0; i <= nSeg; i++) rows.push(y0 + span * i / nSeg);
+  for (const y of rows) { marks.push({ x: e, y }); marks.push({ x: W - e, y }); }
+  if (S.regProfile === 'qcut') {
+    const ys = bottomFeed ? y0 : y1;
+    const xs = rightFeed ? W - e - S.regPair : e + S.regPair;
+    marks.push({ x: xs, y: ys, pair: true });
+  }
+  return marks;
+}
+let nestTimer = 0;
+function scheduleNest(ms = 450) { clearTimeout(nestTimer); nestTimer = setTimeout(runNest, ms); }
+async function runNest() {
+  const token = ++nestToken;
+  if (!items.length) { layout = null; renderAll(); setStatus('PDF bekleniyor'); return }
+  setStatus('Yerleşim hesaplanıyor…', 'busy'); showBar(0);
+  await sleep(10);
+  const warns = [];
+  const md = mediaDims();
+  if (md.usableW <= 10) { setStatus('Medya eni kenar paylarından küçük', 'err'); return }
+  const inst = buildInstances(warns);
+  const t = performance.now();
+  const shape = S.cutMode === 'shape';
+  const sorts = S.sort === 'order' ? ['order'] : [S.sort, ...['area', 'long', 'perim', 'short'].filter(x => x !== S.sort)];
+  const tries = S.opt === 'fast' ? 1 : S.opt === 'deep' ? 8 : 4;
+  const variants = [];
+  const hs = shape ? ['top', 'mix', 'center'] : ['bl', 'bssf'];
+  for (let i = 0; variants.length < tries && i < 12; i++) variants.push({ sort: sorts[i % sorts.length], h: hs[Math.floor(i / sorts.length) % hs.length] });
+  if (!shape && S.media === 'sheet') variants.forEach(v => v.h = v.h === 'bl' ? 'bssf' : 'bl');
+  let r = null, fixedRes = null;
+  for (let vi = 0; vi < variants.length; vi++) {
+    const v = variants[vi];
+    const pr = x => showBar((vi + x) / variants.length);
+    const rr = shape ? await nestShapes(sortInst(inst, v.sort), md, token, pr, SCORES[v.h], fixedRes) : await nestRects(sortInst(inst, v.sort), md, token, pr, v.h);
+    if (!rr) return;
+    fixedRes = rr.res || null;
+    const cost = rr.unplaced.length * 1e9 + rr.sheets.length * 1e6 + rr.sheets.reduce((a, s) => a + s.usedL, 0);
+    rr.cost = cost; rr.variant = v;
+    if (!r || cost < r.cost - 1e-6) r = rr;
+    if (token !== nestToken) return;
+  }
+  // sayfaları oluştur
+  const sheets = r.sheets.map((s, i) => {
+    const L = S.media === 'roll' ? Math.ceil(s.usedL + 2 * md.head) : md.L;
+    const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.head + p.y }));
+    if (S.feed[0] === 'T') { // besleme üstten: düzeni 180° çevir
+      for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = md.W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
+    }
+    return { W: md.W, L, pl, marks: regMarks(md.W, L) };
+  });
+  if (r.unplaced.length) {
+    const names = [...new Set(r.unplaced.map(u => u.it.name))];
+    warns.unshift(`${r.unplaced.length} adet yerleşmedi (medyadan büyük): ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}`);
+  }
+  layout = { sheets, warns: [...new Set(warns)], res: r.res, md, ms: performance.now() - t, rev: null, sig: settingsSig() };
+  if (curSheet >= sheets.length) curSheet = 0;
+  showBar(-1); setStatus(`${sheets.length} sayfa · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
+  renderAll();
+}
+function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
+
+/* ---------------- önizleme ---------------- */
+let zoomPx = 0;
+function renderAll() { renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv'].forEach(s => $(s).disabled = !ok); }
+function renderSheets() {
+  const el = $('#sheets'); el.innerHTML = '';
+  if (!layout) return;
+  layout.sheets.forEach((s, i) => {
+    const b = document.createElement('button'); b.textContent = `Sayfa ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm`;
+    if (i === curSheet) b.className = 'on'; b.onclick = () => { curSheet = i; renderAll() }; el.appendChild(b);
+  });
+}
+function renderPreview() {
+  const cv = $('#cv'), empty = $('#empty');
+  if (!layout || !layout.sheets.length) { cv.classList.add('hidden'); empty.classList.remove('hidden'); return }
+  cv.classList.remove('hidden'); empty.classList.add('hidden');
+  const sh = layout.sheets[curSheet]; const stage = $('#stage');
+  const zv = +$('#zoom').value;
+  const fit = Math.min((stage.clientWidth - 40) / sh.W, Math.max(0.05, (window.innerHeight * 0.68) / sh.L));
+  const real = 96 / 25.4;
+  let z = zv === 0 ? fit : fit + (real * 2 - fit) * (zv / 100);
+  $('#zoomLbl').textContent = zv === 0 ? 'Sığdır' : `%${Math.round(z / real * 100)}`;
+  const maxSide = 14000; z = Math.min(z, maxSide / sh.W, maxSide / sh.L);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const k = z * dpr; // piksel / mm
+  cv.width = Math.max(1, Math.round(sh.W * k)); cv.height = Math.max(1, Math.round(sh.L * k));
+  cv.style.width = (sh.W * z) + 'px'; cv.style.height = (sh.L * z) + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+  const F = [k / PT, 0, 0, -k / PT, 0, sh.L * k]; // sayfa-pt -> kanvas
+  const md = layout.md;
+  // kullanılabilir alan
+  c.save(); c.strokeStyle = 'rgba(58,123,255,.55)'; c.setLineDash([6 * dpr, 5 * dpr]); c.lineWidth = dpr;
+  c.strokeRect(md.side * k, (sh.L - (sh.L - md.head)) * k, md.usableW * k, (sh.L - 2 * md.head) * k); c.restore();
+  for (const p of sh.pl) {
+    const it = p.it, g = it.geom;
+    const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
+    const MF = Mx.mul(M, F);
+    if (view === 'print') {
+      c.save();
+      c.clip(path2d(rectSubs(g.clipRect), MF));
+      if (g.poly) c.clip(path2d(polysToSubs(g.poly), MF), 'evenodd');
+      const th = it.thumb; const G = [1 / th.ppp, 0, 0, -1 / th.ppp, th.view[0], th.view[3]];
+      const T = Mx.mul(G, MF); c.setTransform(T[0], T[1], T[2], T[3], T[4], T[5]);
+      c.drawImage(th.cv, 0, 0); c.restore();
+    }
+    if (view === 'cut' || $('#showCut').checked) {
+      c.save(); c.strokeStyle = view === 'cut' ? '#e00000' : 'rgba(255,0,0,.9)'; c.lineWidth = Math.max(1, 0.35 * k * 0.6);
+      c.stroke(path2d(g.cut, MF)); c.restore();
+    }
+  }
+  // register
+  c.fillStyle = '#000'; c.strokeStyle = '#000';
+  for (const m of sh.marks) {
+    const x = m.x * k, y = (sh.L - m.y) * k, r = S.regDia / 2 * k;
+    if (S.regProfile === 'cross') { c.lineWidth = Math.max(1, 0.3 * k); c.beginPath(); c.moveTo(x - r, y); c.lineTo(x + r, y); c.moveTo(x, y - r); c.lineTo(x, y + r); c.stroke(); }
+    else { c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
+  }
+  if (view === 'print') {
+    const rv = revText(); const tp = revTextPos(sh);
+    if (tp) { c.fillStyle = '#000'; c.font = `${tp.size / PT * k}px JetBrains Mono, monospace`; c.textBaseline = 'middle'; c.fillText(rv, tp.x * k, (sh.L - tp.y) * k); }
+  }
+}
+function revText() { return layout && layout.rev ? layout.rev : nextRevPreview() }
+function revTextPos(sh) {
+  const pair = sh.marks.find(m => m.pair); if (!pair) return null;
+  const rightFeed = S.feed[1] === 'R'; const r = S.regDia / 2;
+  const gapStart = rightFeed ? pair.x + r + 0.8 : S.regEdge + r + 0.8;
+  const gapLen = S.regPair - S.regDia - 1.6;
+  const txt = revText(); const size = Math.min(7, Math.max(3, (gapLen * PT) / (txt.length * 0.62)));
+  if (gapLen < 3) return null;
+  return { x: gapStart, y: pair.y, size, txt };
+}
+function renderStats() {
+  const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
+  if (!layout) return;
+  const md = layout.md; let A = 0, U = 0, n = 0, Ltot = 0;
+  layout.sheets.forEach(s => { Ltot += s.L; U += md.usableW * (s.L - 2 * md.head); for (const p of s.pl) { A += p.it.geom.areaMm; n++; } });
+  const sh = layout.sheets[curSheet];
+  let a2 = 0; if (sh) for (const p of sh.pl) a2 += p.it.geom.areaMm;
+  const u2 = sh ? md.usableW * (sh.L - 2 * md.head) : 1;
+  const st = [
+    ['Sayfa', layout.sheets.length],
+    ['Toplam boy', (Ltot / 1000).toFixed(2) + ' m'],
+    ['Yerleşen', n + ' adet'],
+    ['Doluluk (tümü)', U ? (A / U * 100).toFixed(1) + '%' : '–'],
+    ['Bu sayfa', sh ? `${(sh.W / 10).toFixed(1)}×${(sh.L / 10).toFixed(1)} cm` : '–'],
+    ['Bu sayfa doluluk', sh ? (a2 / u2 * 100).toFixed(1) + '%' : '–'],
+    ['Baskı alanı', (Ltot * md.W / 1e6).toFixed(2) + ' m²'],
+  ];
+  if (layout.res) st.push(['Izgara', layout.res + ' mm']);
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
+  if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
+}
+function renderTable() {
+  const t = $('#tbl'); t.innerHTML = '';
+  if (!layout) return;
+  const rows = new Map();
+  layout.sheets.forEach((s, si) => s.pl.forEach(p => { const k = p.it.id; const r = rows.get(k) || { it: p.it, n: 0, sheets: new Set() }; r.n++; r.sheets.add(si + 1); rows.set(k, r); }));
+  t.innerHTML = '<tr><th>İş</th><th>Ölçü (mm)</th><th>Kesim</th><th>Adet</th><th>Sayfa</th></tr>' +
+    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? g.wMm.toFixed(1) + '×' + g.hMm.toFixed(1) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------------- iş listesi ---------------- */
+function renderItems() {
+  const el = $('#items'); el.innerHTML = '';
+  for (const it of items) {
+    const g = computeGeom(it);
+    const d = document.createElement('div'); d.className = 'item';
+    const tc = document.createElement('canvas'); tc.width = 128; tc.height = 128;
+    drawItemThumb(it, tc);
+    const right = document.createElement('div');
+    const badges = [];
+    if (g.mode === 'shape') badges.push(['cut', 'ÖZEL ŞEKİL']); else badges.push(['', 'DİKDÖRTGEN']);
+    if (it.an.cut.length) badges.push(['cut', 'CUT ✓']);
+    if (it.an.bleed.length) badges.push(['ok', 'BLEED ✓']);
+    badges.push(g.verified ? ['ok', 'Bleed doğrulandı'] : ['warn', 'Bleed doğrulanmadı']);
+    right.innerHTML = `<div style="display:flex;gap:6px"><div class="nm" title="${esc(it.name)}">${esc(it.name)}</div><button class="x" title="Kaldır">×</button></div>
+      <div class="meta">${g.wMm.toFixed(1)} × ${g.hMm.toFixed(1)} mm · ${g.mode === 'shape' ? 'kontur' : 'çerçeve'}</div>
+      <div class="badges">${badges.map(b => `<span class="badge ${b[0]}">${b[1]}</span>`).join('')}</div>
+      <div class="ictl"><label>Adet <input type="number" min="0" step="1" value="${it.qty}" data-f="qty"></label>
+      <label>Ölçek % <input type="number" min="5" max="1000" step="1" value="${it.scale}" data-f="scale"></label>
+      <label class="chk" style="font-size:11.5px"><input type="checkbox" data-f="rotate" ${it.rotate ? 'checked' : ''}>90°</label></div>`;
+    right.querySelector('.x').onclick = () => { items.splice(items.indexOf(it), 1); renderItems(); scheduleNest(100); };
+    right.querySelectorAll('[data-f]').forEach(inp => inp.onchange = () => {
+      const f = inp.dataset.f;
+      if (f === 'rotate') it.rotate = inp.checked;
+      else { const v = Math.max(f === 'scale' ? 5 : 0, Math.round(+inp.value || 0)); it[f] = v; inp.value = v; }
+      if (f === 'scale') renderItems(); else updateTotals();
+      scheduleNest();
+    });
+    d.append(tc, right); el.appendChild(d);
+  }
+  updateTotals();
+}
+function updateTotals() {
+  const n = items.reduce((s, i) => s + i.qty, 0);
+  const a = items.reduce((s, i) => s + i.qty * (i.geom ? i.geom.areaMm : 0), 0);
+  $('#totals').innerHTML = items.length ? `<span>${items.length} iş · <b>${n}</b> adet</span><span>Net alan <b>${(a / 1e6).toFixed(3)} m²</b></span>` : '';
+}
+function drawItemThumb(it, tc) {
+  const c = tc.getContext('2d'); const g = it.geom, th = it.thumb; if (!th) return;
+  const fw = g.frame[2] - g.frame[0], fh = g.frame[3] - g.frame[1]; const k = Math.min(120 / fw, 120 / fh);
+  const F = [k, 0, 0, -k, (128 - fw * k) / 2 - g.frame[0] * k, (128 - fh * k) / 2 + g.frame[3] * k];
+  c.save(); c.clip(path2d(rectSubs(g.clipRect), F)); if (g.poly) c.clip(path2d(polysToSubs(g.poly), F), 'evenodd');
+  const G = [1 / th.ppp, 0, 0, -1 / th.ppp, th.view[0], th.view[3]]; const T = Mx.mul(G, F);
+  c.setTransform(...T); c.drawImage(th.cv, 0, 0); c.restore();
+  c.strokeStyle = '#ff2d2d'; c.lineWidth = 1.2; c.stroke(path2d(g.cut, F));
+}
+
+/* ---------------- REV ---------------- */
+function nextRevNum() { return (+(LS.get('nest.rev') || 0)) + 1 }
+function nextRevPreview() { return 'NST-' + String(nextRevNum()).padStart(4, '0') }
+function ensureRev() {
+  if (layout.rev && layout.revSig === layout.sig) return layout.rev;
+  const n = nextRevNum(); LS.set('nest.rev', String(n));
+  layout.rev = 'NST-' + String(n).padStart(4, '0'); layout.revSig = layout.sig;
+  updateRevLbl(); renderPreview(); return layout.rev;
+}
+function updateRevLbl() { $('#revLbl').innerHTML = layout && layout.rev ? `Bu yerleşim: <b>${layout.rev}</b> · baskı ve kesim aynı REV'i taşır. Sıradaki: ${nextRevPreview()}` : `Sıradaki: <b>${nextRevPreview()}</b> · numara ilk indirmede ayrılır, baskı ve kesim aynı REV'i taşır.`; }
+
+/* ---------------- PDF çıktıları ---------------- */
+function circleOps(cx, cy, r) {
+  const k = 0.5523 * r;
+  return [moveTo(cx + r, cy), appendBezierCurve(cx + r, cy + k, cx + k, cy + r, cx, cy + r), appendBezierCurve(cx - k, cy + r, cx - r, cy + k, cx - r, cy),
+    appendBezierCurve(cx - r, cy - k, cx - k, cy - r, cx, cy - r), appendBezierCurve(cx + k, cy - r, cx + r, cy - k, cx + r, cy), closePath()];
+}
+function subsOps(subs) {
+  const ops = [];
+  for (const sp of subs) for (const c of sp) {
+    if (c[0] === 'M') ops.push(moveTo(c[1], c[2])); else if (c[0] === 'L') ops.push(lineTo(c[1], c[2]));
+    else if (c[0] === 'C') ops.push(appendBezierCurve(c[1], c[2], c[3], c[4], c[5], c[6])); else ops.push(closePath());
+  }
+  return ops;
+}
+function regOps(sh, forCut) {
+  const ops = [];
+  if (!sh.marks.length) return ops;
+  if (S.regProfile === 'cross') {
+    ops.push(pushGraphicsState(), setStrokingCmykColor(0, 0, 0, 1), setLineWidth(0.5));
+    for (const m of sh.marks) { const x = m.x * PT, y = m.y * PT, r = S.regDia / 2 * PT; ops.push(moveTo(x - r, y), lineTo(x + r, y), moveTo(x, y - r), lineTo(x, y + r), stroke()); }
+    ops.push(popGraphicsState());
+  } else {
+    ops.push(pushGraphicsState(), P.setFillingCmykColor(0, 0, 0, 1));
+    for (const m of sh.marks) ops.push(...circleOps(m.x * PT, m.y * PT, S.regDia / 2 * PT), P.fill());
+    ops.push(popGraphicsState());
+  }
+  return ops;
+}
+async function buildPrintPdf() {
+  const out = await PDFDocument.create();
+  out.setTitle(`${ensureRev()} baskı`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
+  const used = [...new Set(layout.sheets.flatMap(s => s.pl.map(p => p.it)))];
+  const emb = new Map();
+  // CUT/BLEED çizgilerini geçici olarak gizle → sayfayı göm → geri al
+  for (const it of used) if (S.hideLines) setRewrites(it, true);
+  try {
+    for (const it of used) {
+      const g = it.geom; const bb = g.clipRect;
+      const e = await out.embedPage(it.page, { left: bb[0], bottom: bb[1], right: bb[2], top: bb[3] }, [1, 0, 0, 1, 0, 0]);
+      emb.set(it, e);
+    }
+  } finally { for (const it of used) setRewrites(it, false); }
+  const font = await out.embedFont(StandardFonts.HelveticaBold);
+  for (const sh of layout.sheets) {
+    const pg = out.addPage([sh.W * PT, sh.L * PT]);
+    const names = new Map();
+    for (const p of sh.pl) {
+      const it = p.it, g = it.geom; let xn = names.get(it);
+      if (!xn) { xn = pg.node.newXObject('Nst', emb.get(it).ref); names.set(it, xn); }
+      const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
+      const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
+      const cr = g.clipRect; ops.push(P.rectangle(cr[0], cr[1], cr[2] - cr[0], cr[3] - cr[1]), clip(), endPath());
+      if (g.poly) { ops.push(...subsOps(polysToSubs(g.poly)), clipEvenOdd(), endPath()); }
+      ops.push(drawObject(xn), popGraphicsState());
+      pg.pushOperators(...ops);
+    }
+    pg.pushOperators(...regOps(sh, false));
+    const tp = revTextPos(sh);
+    if (tp) pg.drawText(tp.txt, { x: tp.x * PT, y: tp.y * PT - tp.size * 0.35, size: tp.size, font, color: cmyk(0, 0, 0, 1) });
+  }
+  return out.save();
+}
+async function buildCutPdf() {
+  const out = await PDFDocument.create();
+  out.setTitle(`${ensureRev()} kesim`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
+  for (const sh of layout.sheets) {
+    const pg = out.addPage([sh.W * PT, sh.L * PT]);
+    const ops = [pushGraphicsState(), setStrokingCmykColor(0, 1, 1, 0), setLineWidth(S.cutWidth), setLineJoin(LineJoinStyle.Round)];
+    for (const p of sh.pl) { const M = placeMatrix(p.it, p.rot, p.X * PT, p.Y * PT); ops.push(...subsOps(transformSubs(p.it.geom.cut, M)), stroke()); }
+    ops.push(popGraphicsState());
+    pg.pushOperators(...ops, ...regOps(sh, true));
+  }
+  return out.save();
+}
+function buildCsv() {
+  const rows = [['REV', 'Sayfa', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim']];
+  layout.sheets.forEach((s, si) => s.pl.forEach(p => {
+    const [w, h] = rotDims(p.it.geom, p.rot);
+    rows.push([layout.rev || '', si + 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen']);
+  }));
+  return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
+}
+function fileBase() { const j = (S.jobName || 'nest').trim().replace(/[^\w\-]+/g, '_') || 'nest'; return `${layout.rev}_${j}` }
+
+let dlCap; const dlReady = (async () => { for (let i = 0; i < 40 && !(window.claude && window.claude.use); i++) await sleep(50); try { dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null } catch { dlCap = null } })();
+async function saveFile(name, data, type) {
+  await dlReady;
+  const blob = new Blob([data], { type });
+  if (dlCap) {
+    try { await dlCap.save({ filename: name, data: blob }); toast(`${name} indirildi`); return }
+    catch (e) { if (e && e.code === 'declined') { toast('İndirme iptal edildi'); return } if (e && e.code === 'rate_limited') { toast('Önceki indirme onayı bekliyor'); return } }
+  }
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000); toast(`${name} hazırlandı`);
+}
+async function withBusy(btn, fn) {
+  const t = btn.textContent; btn.disabled = true; btn.textContent = 'Hazırlanıyor…';
+  try { await fn() } catch (e) { console.error(e); toast('Hata: ' + (e.message || e)) } finally { btn.disabled = false; btn.textContent = t }
+}
+$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); await saveFile(`${fileBase()}_BASKI.pdf`, b, 'application/pdf'); });
+$('#dlCut').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); });
+$('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
+
+/* ---------------- örnek iş ---------------- */
+async function samplePdf() {
+  const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.HelveticaBold);
+  const B = 3 * PT, CUT = cmyk(0, 1, 1, 0), BLD = cmyk(0, 0.5, 0.5, 0);
+  const mk = (wMm, hMm) => d.addPage([wMm * PT + 2 * B, hMm * PT + 2 * B]);
+  { // daire
+    const D = 60 * PT, pg = mk(60, 60); const W = pg.getWidth();
+    pg.drawRectangle({ x: 0, y: 0, width: W, height: W, color: cmyk(0.85, 0.1, 0, 0) });
+    pg.drawCircle({ x: W / 2, y: W / 2, size: D * 0.34, color: cmyk(0, 0.05, 0.9, 0) });
+    pg.drawText('ORNEK', { x: W / 2 - 52, y: W / 2 - 10, size: 28, font: f, color: cmyk(0, 0, 0, 1) });
+    pg.drawCircle({ x: W / 2, y: W / 2, size: D / 2, borderColor: CUT, borderWidth: 0.25 });
+    pg.drawRectangle({ x: 0.1, y: 0.1, width: W - 0.2, height: W - 0.2, borderColor: BLD, borderWidth: 0.25 });
+  }
+  { // yıldız
+    const S2 = 80 * PT, pg = mk(80, 76); const W = pg.getWidth(), H = pg.getHeight();
+    pg.drawRectangle({ x: 0, y: 0, width: W, height: H, color: cmyk(0, 0.75, 0.9, 0) });
+    let dpath = ''; const cx = W / 2, cy = H / 2 + 2, R = S2 / 2, r = R * 0.45;
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5; const rr = i % 2 ? r : R; dpath += (i ? 'L' : 'M') + (cx + rr * Math.cos(a)).toFixed(2) + ' ' + (cy + rr * Math.sin(a)).toFixed(2) + ' '; }
+    dpath += 'Z';
+    pg.drawText('STAR', { x: cx - 33, y: H - cy - 8, size: 24, font: f, color: cmyk(0, 0, 0, 1) });
+    pg.drawSvgPath(dpath, { x: 0, y: H, borderColor: CUT, borderWidth: 0.25 });
+    pg.drawRectangle({ x: 0.1, y: 0.1, width: W - 0.2, height: H - 0.2, borderColor: BLD, borderWidth: 0.25 });
+  }
+  { // yuvarlak köşeli etiket
+    const pg = mk(90, 50); const W = pg.getWidth(), H = pg.getHeight(), rr = 8 * PT, x0 = B, y0 = B, x1 = W - B, y1 = H - B;
+    pg.drawRectangle({ x: 0, y: 0, width: W, height: H, color: cmyk(0.6, 0, 0.9, 0) });
+    pg.drawText('LABEL 90x50', { x: x0 + 16, y: H / 2 - 8, size: 22, font: f, color: cmyk(0, 0, 0, 1) });
+    const dp = `M${x0 + rr} ${y0} L${x1 - rr} ${y0} Q${x1} ${y0} ${x1} ${y0 + rr} L${x1} ${y1 - rr} Q${x1} ${y1} ${x1 - rr} ${y1} L${x0 + rr} ${y1} Q${x0} ${y1} ${x0} ${y1 - rr} L${x0} ${y0 + rr} Q${x0} ${y0} ${x0 + rr} ${y0} Z`;
+    pg.drawSvgPath(dp, { x: 0, y: H, borderColor: CUT, borderWidth: 0.25 });
+    pg.drawRectangle({ x: 0.1, y: 0.1, width: W - 0.2, height: H - 0.2, borderColor: BLD, borderWidth: 0.25 });
+  }
+  { // damla / oval
+    const pg = mk(45, 70); const W = pg.getWidth(), H = pg.getHeight();
+    pg.drawRectangle({ x: 0, y: 0, width: W, height: H, color: cmyk(0.9, 0.7, 0, 0) });
+    pg.drawEllipse({ x: W / 2, y: H / 2, xScale: 45 * PT / 2, yScale: 70 * PT / 2, borderColor: CUT, borderWidth: 0.25 });
+    pg.drawText('OVAL', { x: W / 2 - 30, y: H / 2 - 8, size: 22, font: f, color: cmyk(0, 0, 0, 0) });
+    pg.drawRectangle({ x: 0.1, y: 0.1, width: W - 0.2, height: H - 0.2, borderColor: BLD, borderWidth: 0.25 });
+  }
+  return d.save();
+}
+$('#btnSample').onclick = async () => {
+  clearAll(); setStatus('Örnek iş hazırlanıyor…', 'busy');
+  const b = await samplePdf(); await loadPdf('ornek-is.pdf', b, b.length, [24, 14, 12, 16]); renderItems(); scheduleNest(30);
+};
+$('#btnSamplePdf').onclick = async () => { const b = await samplePdf(); await saveFile('CUT-BLEED-3mm-ornek.pdf', b, 'application/pdf'); };
+
+/* ---------------- arayüz bağlantıları ---------------- */
+function clearAll() { files.length = 0; items.length = 0; layout = null; curSheet = 0; renderItems(); renderAll(); setStatus('PDF bekleniyor'); updateRevLbl(); }
+$('#btnClear').onclick = clearAll;
+const drop = $('#drop');
+$('#fileIn').onchange = e => { addFiles(e.target.files); e.target.value = '' };
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over') }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over') }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault());
+
+function bindSettings() {
+  $$('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    if (el.type === 'checkbox') el.checked = !!S[k]; else el.value = S[k];
+    el.onchange = () => {
+      S[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (+el.value || 0) : el.value;
+      if (k === 'cutSource') { for (const it of items) { it.an = safeAnalyze(it); it.geom = null; } }
+      if (['cutMode', 'bleed', 'cutSource', 'gapMode', 'gapUnverified', 'gapManual'].includes(k)) renderItems();
+      scheduleNest();
+    };
+  });
+  segInit('#segMedia', 'media', () => { $$('[data-show]').forEach(e => e.classList.toggle('hidden', e.dataset.show !== S.media)); scheduleNest() });
+  segInit('#segCut', 'cutMode', () => { renderItems(); scheduleNest() });
+  $$('[data-show]').forEach(e => e.classList.toggle('hidden', e.dataset.show !== S.media));
+}
+function segInit(sel, key, cb) {
+  const el = $(sel); el.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === S[key]); b.onclick = () => { S[key] = b.dataset.v; el.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); cb() } });
+}
+$('#segView').querySelectorAll('button').forEach(b => b.onclick = () => { view = b.dataset.v; $('#segView').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderPreview() });
+$('#zoom').oninput = renderPreview; $('#showCut').onchange = renderPreview;
+let rsT; window.addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(renderPreview, 150) });
+$('#btnSaveSet').onclick = () => { LS.set('nest.settings', JSON.stringify(S)); toast('Ayarlar bu tarayıcıya kaydedildi') };
+$('#btnExportSet').onclick = () => saveFile('nest-ayarlar.json', JSON.stringify(S, null, 2), 'application/json');
+$('#btnResetSet').onclick = () => { S = { ...DEFAULTS }; bindSettings(); for (const it of items) { it.an = safeAnalyze(it); it.geom = null } renderItems(); scheduleNest() };
+$('#setIn').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const o = JSON.parse(await f.text()); S = { ...DEFAULTS, ...o }; bindSettings(); for (const it of items) { it.an = safeAnalyze(it); it.geom = null } renderItems(); scheduleNest(); toast('Ayarlar içe aktarıldı') } catch { toast('Ayar dosyası okunamadı') } e.target.value = '' };
+
+function setStatus(t, cls = '') { const s = $('#status'); s.textContent = t; s.className = 'status ' + cls; }
+function showBar(v) { const b = $('#bar'); if (v < 0) { b.style.display = 'none'; return } b.style.display = 'block'; b.firstElementChild.style.width = (v * 100).toFixed(0) + '%'; }
+let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 3200); }
+
+bindSettings(); updateRevLbl();
+window.__nest = { offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
+</script>
+</body>
+</html>
