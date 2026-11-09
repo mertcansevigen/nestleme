@@ -984,11 +984,14 @@ async function runNest() {
   // sayfaları oluştur
   const sheets = r.sheets.map((s, i) => {
     const L = Math.ceil(s.usedL + 2 * md.head);
+    // sayfa eni dosya alanı kadar: en sağdaki işin kenarı + kenar payı (register buna göre yerleşir)
+    const usedW = Math.max(...s.pl.map(p => p.x + rotDims(p.it.geom, p.rot)[0] + p.it.geom.gap / 2), 0);
+    const W = Math.min(md.W, Math.ceil(usedW + 2 * md.side));
     const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.head + p.y }));
     if (S.feed[0] === 'T') { // besleme üstten: düzeni 180° çevir
-      for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = md.W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
+      for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
     }
-    return { W: md.W, L, pl, marks: regMarks(md.W, L) };
+    return { W, L, pl, marks: regMarks(W, L) };
   });
   if (r.unplaced.length) {
     const names = [...new Set(r.unplaced.map(u => u.it.name))];
@@ -1035,7 +1038,7 @@ function drawSheet(c, sh, k, view, showCut, dpr = 1) {
   const md = layout.md;
   // kullanılabilir alan
   c.save(); c.strokeStyle = 'rgba(58,123,255,.55)'; c.setLineDash([6 * dpr, 5 * dpr]); c.lineWidth = dpr;
-  c.strokeRect(md.side * k, (sh.L - (sh.L - md.head)) * k, md.usableW * k, (sh.L - 2 * md.head) * k); c.restore();
+  c.strokeRect(md.side * k, md.head * k, (sh.W - 2 * md.side) * k, (sh.L - 2 * md.head) * k); c.restore();
   for (const p of sh.pl) {
     const it = p.it, g = it.geom;
     const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
@@ -1079,10 +1082,10 @@ function renderStats() {
   const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
   if (!layout) return;
   const md = layout.md; let A = 0, U = 0, n = 0, Ltot = 0;
-  layout.sheets.forEach(s => { Ltot += s.L; U += md.usableW * (s.L - 2 * md.head); for (const p of s.pl) { A += p.it.geom.areaMm; n++; } });
+  let Atot = 0; layout.sheets.forEach(s => { Ltot += s.L; Atot += s.W * s.L; U += (s.W - 2 * md.side) * (s.L - 2 * md.head); for (const p of s.pl) { A += p.it.geom.areaMm; n++; } });
   const sh = layout.sheets[curSheet];
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += p.it.geom.areaMm;
-  const u2 = sh ? md.usableW * (sh.L - 2 * md.head) : 1;
+  const u2 = sh ? (sh.W - 2 * md.side) * (sh.L - 2 * md.head) : 1;
   const st = [
     ['Sayfa', layout.sheets.length],
     ['Toplam boy', (Ltot / 1000).toFixed(2) + ' m'],
@@ -1090,7 +1093,8 @@ function renderStats() {
     ['Doluluk (tümü)', U ? (A / U * 100).toFixed(1) + '%' : '–'],
     ['Bu sayfa', sh ? `${(sh.W / 10).toFixed(1)}×${(sh.L / 10).toFixed(1)} cm` : '–'],
     ['Bu sayfa doluluk', sh ? (a2 / u2 * 100).toFixed(1) + '%' : '–'],
-    ['Baskı alanı', (Ltot * md.W / 1e6).toFixed(2) + ' m²'],
+    ['Baskı alanı', (Atot / 1e6).toFixed(2) + ' m²'],
+    ['Folyo', `${md.rollCm} cm · ${(md.rollCm * Ltot / 1e5).toFixed(2)} m²`],
   ];
   if (layout.res) st.push(['Izgara', layout.res + ' mm']);
   for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat'; d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
