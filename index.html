@@ -1074,8 +1074,12 @@ function revTextPos(sh) {
   const rightFeed = S.feed[1] === 'R'; const r = S.regDia / 2;
   const gapStart = rightFeed ? pair.x + r + 0.8 : S.regEdge + r + 0.8;
   const gapLen = S.regPair - S.regDia - 1.6;
-  const txt = revText(); const size = Math.min(7, Math.max(3, (gapLen * PT) / (txt.length * 0.62)));
   if (gapLen < 3) return null;
+  // REV + iş adı; noktalar arasına sığan en büyük boyut (en fazla 14 pt, en az 6 pt)
+  let txt = revText(); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '');
+  const fit = t => (gapLen * PT) / (t.length * 0.62);
+  while (fit(txt) < 6 && txt.length > 8) txt = txt.slice(0, -2) + '…';
+  const size = Math.min(14, Math.max(6, fit(txt)));
   return { x: gapStart, y: pair.y, size, txt };
 }
 function renderStats() {
