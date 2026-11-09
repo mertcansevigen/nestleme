@@ -222,7 +222,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
       <section class="card" id="indir">
         <h2><span class="n">03</span>Dosyalarını indir</h2>
         <p class="sub">Çizgisiz baskı ve ayrı kesim; aynı ölçü ve koordinatlar. Baskı %100 ölçekte yapılır.</p>
-        <div class="rev" id="revLbl">Sıradaki: <b>NST-0001</b> · numara ilk indirmede ayrılır, baskı ve kesim aynı REV'i taşır.</div>
+        <div class="rev" id="revLbl"></div>
         <div class="dl">
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
           <button class="btn" id="dlCut" disabled>Kesim PDF indir ↓</button>
@@ -1006,7 +1006,7 @@ function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, 
 
 /* ---------------- önizleme ---------------- */
 let zoomPx = 0;
-function renderAll() { renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
+function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
 function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
@@ -1065,22 +1065,24 @@ function drawSheet(c, sh, k, view, showCut, dpr = 1) {
   }
   if (view === 'print') {
     const rv = revText(); const tp = revTextPos(sh);
-    if (tp) { c.fillStyle = '#000'; c.font = `${tp.size / PT * k}px JetBrains Mono, monospace`; c.textBaseline = 'middle'; c.fillText(rv, tp.x * k, (sh.L - tp.y) * k); }
+    if (tp) { c.fillStyle = '#000'; c.font = `bold ${tp.size / PT * k}px Helvetica, Arial, sans-serif`; c.textBaseline = 'alphabetic'; c.fillText(tp.txt, tp.x * k, (sh.L - tp.base / PT) * k); }
   }
 }
 function revText() { return layout && layout.rev ? layout.rev : nextRevPreview() }
+// Helvetica-Bold ölçüleri (önizleme ve PDF aynı boyutu kullanır)
+const HB = await (await PDFDocument.create()).embedFont(StandardFonts.HelveticaBold);
 function revTextPos(sh) {
   const pair = sh.marks.find(m => m.pair); if (!pair) return null;
-  const rightFeed = S.feed[1] === 'R'; const r = S.regDia / 2;
-  const gapStart = rightFeed ? pair.x + r + 0.8 : S.regEdge + r + 0.8;
-  const gapLen = S.regPair - S.regDia - 1.6;
-  if (gapLen < 3) return null;
-  // REV + iş adı; noktalar arasına sığan en büyük boyut (en fazla 14 pt, en az 6 pt)
-  let txt = revText(); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E\u00C0-\u00FF]/g, '');
-  const fit = t => (gapLen * PT) / (t.length * 0.62);
-  while (fit(txt) < 6 && txt.length > 8) txt = txt.slice(0, -2) + '…';
-  const size = Math.min(14, Math.max(6, fit(txt)));
-  return { x: gapStart, y: pair.y, size, txt };
+  const rightFeed = S.feed[1] === 'R'; const r = S.regDia / 2, pad = 1;
+  const inner = rightFeed ? pair.x + r : S.regEdge + r;           // soldaki noktanın sağ kenarı (mm)
+  const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
+  if (avail < 3) return null;
+  let txt = revText(); const job = (S.jobName || '').trim(); if (job) txt += ' · ' + winAnsi(job).replace(/[^\x20-\x7E·À-ÿ]/g, '');
+  const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5)) * PT / 0.718; // yükseklik: kenar ve iş alanına taşmasın
+  const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
+  while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
+  const size = sizeFor(txt), w = HB.widthOfTextAtSize(txt, size) / PT;
+  return { x: inner + pad + (avail - w) / 2, y: pair.y, size, txt, base: pair.y * PT - 0.718 * size / 2 };
 }
 function renderStats() {
   const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
@@ -1155,15 +1157,28 @@ function drawItemThumb(it, tc) {
 }
 
 /* ---------------- REV ---------------- */
-function nextRevNum() { return (+(LS.get('nest.rev') || 0)) + 1 }
-function nextRevPreview() { return 'NST-' + String(nextRevNum()).padStart(4, '0') }
+// Yalnız son BASKI numarası saklanır (tek değer). Numara sadece baskı PDF'i indirilince işlenir.
+const REV_KEY = 'nest.rev.last';
+try { localStorage.removeItem('nest.rev'); } catch {}
+function lastRev() { return +(LS.get(REV_KEY) || 0) }
+function revCode(n) { return 'REV-' + String(n).padStart(4, '0') }
+function nextRevPreview() { return revCode(lastRev() + 1) }
 function ensureRev() {
   if (layout.rev && layout.revSig === layout.sig) return layout.rev;
-  const n = nextRevNum(); LS.set('nest.rev', String(n));
-  layout.rev = 'NST-' + String(n).padStart(4, '0'); layout.revSig = layout.sig;
+  layout.revN = lastRev() + 1; layout.rev = revCode(layout.revN); layout.revSig = layout.sig; layout.revDone = false;
   updateRevLbl(); renderPreview(); return layout.rev;
 }
-function updateRevLbl() { $('#revLbl').innerHTML = layout && layout.rev ? `Bu yerleşim: <b>${layout.rev}</b> · baskı ve kesim aynı REV'i taşır. Sıradaki: ${nextRevPreview()}` : `Sıradaki: <b>${nextRevPreview()}</b> · numara ilk indirmede ayrılır, baskı ve kesim aynı REV'i taşır.`; }
+function commitRev() {
+  if (!layout || !layout.revN) return;
+  if (layout.revN > lastRev()) LS.set(REV_KEY, String(layout.revN));
+  layout.revDone = true; updateRevLbl();
+}
+function updateRevLbl() {
+  const last = lastRev(), lastTxt = last ? ` · Son baskı: <b>${revCode(last)}</b>` : '';
+  $('#revLbl').innerHTML = layout && layout.rev && layout.revDone
+    ? `Bu yerleşim <b>${layout.rev}</b> olarak basıldı${lastTxt}`
+    : `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · numara yalnız baskı PDF'i indirilince işlenir; kesim, sunum ve rapor aynı numarayı taşır ama ilerletmez${lastTxt}`;
+}
 
 /* ---------------- PDF çıktıları ---------------- */
 function circleOps(cx, cy, r) {
@@ -1223,7 +1238,7 @@ async function buildPrintPdf() {
     }
     pg.pushOperators(...regOps(sh, false));
     const tp = revTextPos(sh);
-    if (tp) pg.drawText(tp.txt, { x: tp.x * PT, y: tp.y * PT - tp.size * 0.35, size: tp.size, font, color: cmyk(0, 0, 0, 1) });
+    if (tp) pg.drawText(tp.txt, { x: tp.x * PT, y: tp.base, size: tp.size, font, color: cmyk(0, 0, 0, 1) });
   }
   return out.save();
 }
@@ -1254,17 +1269,17 @@ async function saveFile(name, data, type) {
   await dlReady;
   const blob = new Blob([data], { type });
   if (dlCap) {
-    try { await dlCap.save({ filename: name, data: blob }); toast(`${name} indirildi`); return }
-    catch (e) { if (e && e.code === 'declined') { toast('İndirme iptal edildi'); return } if (e && e.code === 'rate_limited') { toast('Önceki indirme onayı bekliyor'); return } }
+    try { await dlCap.save({ filename: name, data: blob }); toast(`${name} indirildi`); return true }
+    catch (e) { if (e && e.code === 'declined') { toast('İndirme iptal edildi'); return false } if (e && e.code === 'rate_limited') { toast('Önceki indirme onayı bekliyor'); return false } }
   }
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000); toast(`${name} hazırlandı`);
+  setTimeout(() => URL.revokeObjectURL(url), 60000); toast(`${name} hazırlandı`); return true;
 }
 async function withBusy(btn, fn) {
   const t = btn.textContent; btn.disabled = true; btn.textContent = 'Hazırlanıyor…';
   try { await fn() } catch (e) { console.error(e); toast('Hata: ' + (e.message || e)) } finally { btn.disabled = false; btn.textContent = t }
 }
-$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); await saveFile(`${fileBase()}_BASKI.pdf`, b, 'application/pdf'); });
+$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); if (await saveFile(`${fileBase()}_BASKI.pdf`, b, 'application/pdf')) commitRev(); });
 $('#dlCut').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); });
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
 
