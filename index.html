@@ -773,12 +773,12 @@ function getMask(it, rot, res) {
     var colRuns = new Array(cw);
     for (let x = 0; x < cw; x++) {
       const rr = []; let inRun = false;
-      for (let row = 0; row < ch; row++) { const on = d[((ch - 1 - row) * cw + x) * 4 + 3] > 0; if (on && !inRun) { rr.push(row); inRun = true } else if (!on && inRun) { rr.push(row); inRun = false } }
+      for (let row = 0; row < ch; row++) { const on = d[(row * cw + x) * 4 + 3] > 0; if (on && !inRun) { rr.push(row); inRun = true } else if (!on && inRun) { rr.push(row); inRun = false } }
       if (inRun) rr.push(ch); colRuns[x] = rr;
     }
     for (let x = 0; x < cw; x++) {
       let lo = -1, hi = -1;
-      for (let y = 0; y < ch; y++) if (d[(y * cw + x) * 4 + 3] > 0) { const row = ch - 1 - y; if (hi < 0) hi = row + 1; lo = row; }
+      for (let y = 0; y < ch; y++) if (d[(y * cw + x) * 4 + 3] > 0) { if (lo < 0) lo = y; hi = y + 1; }
       bottom[x] = lo < 0 ? -1 : lo; top[x] = lo < 0 ? -1 : hi;
     }
   }
@@ -938,7 +938,7 @@ async function nestShapes(inst, md, token, prog, SCORE = SCORES.top, fixedRes) {
       if (best) {
         const { x, y, r, m, runs } = best;
         for (let c = 0; c < m.cw; c++) { const rr = runs[c]; for (let k = 0; k < rr.length; k += 2) insertRun(sh.cols[x + c], y + rr[k], y + rr[k + 1]); }
-        sh.pl.push({ it, rot: r, x: x * res + m.pad, y: y * res + m.pad });
+        sh.pl.push({ it, rot: r, x: x * res + m.pad, y: y * res + m.ch * res - rotDims(it.geom, r)[1] - m.pad }); // y: kullanılabilir alanın üstünden ölçülür
         placed = true;
       } else if (si === sheets.length - 1 && !sh.pl.length) { sheets.pop(); break; }
     }
@@ -997,7 +997,7 @@ async function runNest() {
     // sayfa eni dosya alanı kadar: en sağdaki işin kenarı + kenar payı (register buna göre yerleşir)
     const usedW = Math.max(...s.pl.map(p => p.x + rotDims(p.it.geom, p.rot)[0] + p.it.geom.gap / 2), 0);
     const W = Math.min(md.W, Math.ceil(usedW + 2 * md.side));
-    const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.head + p.y }));
+    const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: L - md.head - p.y - rotDims(p.it.geom, p.rot)[1] })); // sol üstten hizalı
     if (S.feed[0] === 'T') { // besleme üstten: düzeni 180° çevir
       for (const p of pl) { const [w, h] = rotDims(p.it.geom, p.rot); p.X = W - p.X - w; p.Y = L - p.Y - h; p.rot = (p.rot + 180) % 360; }
     }
@@ -1055,7 +1055,7 @@ function sceneOf(sh) {
   const md = layout.md, roll = md.rollCm * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
   const foreks = S.substrate === 'foreks';
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
-  const fx = 0, px = fx + roll - S.pay / 2 - sh.W; // besleme sağdan: baskı alanı folyonun sağ makine payına dayalı
+  const fx = 0, px = fx + S.pay / 2; // baskı alanı folyonun sol makine payından başlar (sol üst hizalı)
   return { W, L, roll, pad, foreks, fx, px: Math.max(fx + S.pay / 2, px), py: pad, sh };
 }
 function drawScene(c, sc, k, dpr) {
@@ -1072,7 +1072,7 @@ function drawScene(c, sc, k, dpr) {
   const mp = S.pay / 2 * k; c.beginPath(); c.moveTo(sc.fx * k + mp, 0); c.lineTo(sc.fx * k + mp, sc.L * k); c.moveTo((sc.fx + sc.roll) * k - mp, 0); c.lineTo((sc.fx + sc.roll) * k - mp, sc.L * k); c.stroke(); c.restore(); // makine baskı sınırı
   c.fillStyle = 'rgba(0,0,0,.45)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`;
   const fm2 = sc.roll * sc.sh.L / 1e6;
-  c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, sc.fx * k + 6 * dpr, 16 * dpr);
+  c.textAlign = 'right'; c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, (sc.fx + sc.roll) * k - 8 * dpr, 16 * dpr); c.textAlign = 'left';
   // baskı alanı gölgesi
   c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k);
 }
