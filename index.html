@@ -213,6 +213,8 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
               </select></label>
             <label class="f"><span>Doğrulanmamış dosyada boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapUnverified"></label>
             <label class="f"><span>Elle ek boşluk (mm)</span><input type="number" step="0.5" min="0" data-k="gapManual"></label>
+            <label class="f chk"><input type="checkbox" data-k="panelOn">Medyadan büyük işleri panellere böl</label>
+            <label class="f"><span>Panel bindirme (mm)</span><input type="number" step="1" min="0" data-k="overlap"></label>
             <label class="f chk"><input type="checkbox" data-k="rot90">90° döndürmeye izin ver</label>
             <label class="f chk"><input type="checkbox" data-k="rot180">180° döndürmeye izin ver</label>
             <label class="f"><span>Yerleştirme hassasiyeti</span>
@@ -331,7 +333,7 @@ const DEFAULTS = {
   cutMode: 'shape', bleed: 3, cutSource: 'auto', hideLines: true,
   gapMode: 'auto', gapUnverified: 3, gapManual: 2, rot90: true, rot180: true, res: 'auto', sort: 'area', opt: 'bal',
   regOn: true, regProfile: 'qcut', regDia: 5, regEdge: 10, regClear: 3, regMaxGap: 500, regPair: 20, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1
+  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 20
 };
 const LS = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
 let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings') || '{}')) };
@@ -829,16 +831,58 @@ function sortInst(inst, mode) {
   if (mode !== 'order') a.sort((x, y) => key(y) - key(x) || x.idx - y.idx);
   return a;
 }
-function buildInstances(warns) {
+function buildInstances(warns, md) {
   const inst = [];
   items.forEach((it, idx) => {
     const g = computeGeom(it);
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
     if (S.cutMode === 'shape' && g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: kesim çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
     if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
-    for (let q = 0; q < it.qty; q++) inst.push({ it, idx, q });
+    const parts = panelize(it, g, md, warns);
+    for (let q = 0; q < it.qty; q++) for (const pt of parts) inst.push({ it: pt, idx, q });
   });
   return inst;
+}
+function fitsMedia(wMm, hMm, gap, md, rot) {
+  const a = wMm + gap <= md.usableW && hMm + gap <= md.maxUsableL;
+  const b = rot && hMm + gap <= md.usableW && wMm + gap <= md.maxUsableL;
+  return a || b;
+}
+function panelize(it, g, md, warns) {
+  const rot = S.rot90 && it.rotate;
+  if (fitsMedia(g.wMm, g.hMm, g.gap, md, rot)) return [it];
+  if (!S.panelOn) { warns.push(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmıyor (panel bölme kapalı).`); return [it]; }
+  const ov = Math.max(0, S.overlap || 0), safe = 3;
+  const UW = md.usableW - g.gap - safe, ML = md.maxUsableL - g.gap - safe;
+  if (UW <= ov + 10 || ML <= ov + 10) { warns.push(`${it.name}: medya bölme için çok dar.`); return [it]; }
+  const plan = (W, H, across) => {
+    const nx = Math.max(1, Math.ceil((W - ov) / (UW - ov))), ny = Math.max(1, Math.ceil((H - ov) / (ML - ov)));
+    const pw = (W + (nx - 1) * ov) / nx, ph = (H + (ny - 1) * ov) / ny, n = nx * ny;
+    const perRow = Math.max(1, Math.floor((md.usableW + g.gap) / (pw + g.gap))), rowsPerSheet = Math.max(1, Math.floor((md.maxUsableL + g.gap) / (ph + g.gap)));
+    const rows = Math.ceil(n / perRow), sheets = Math.ceil(rows / rowsPerSheet);
+    return { nx, ny, n, across, len: rows * (ph + g.gap) + sheets * 2 * md.head };
+  };
+  // across=false: eni W medya enine; across=true: döndürülmüş (H medya enine). En kısa rulo boyu kazanır.
+  let best = plan(g.wMm, g.hMm, false);
+  if (rot) { const b = plan(g.hMm, g.wMm, true); if (b.len < best.len - 1 || (Math.abs(b.len - best.len) <= 1 && b.n < best.n)) best = b; }
+  // sayfa (ölçeksiz) koordinatlarında bölme
+  const fr = g.frame, fw = fr[2] - fr[0], fh = fr[3] - fr[1];
+  const ovPt = ov * PT / g.s;
+  const nxPage = best.across ? best.ny : best.nx, nyPage = best.across ? best.nx : best.ny;
+  const pw = (fw + (nxPage - 1) * ovPt) / nxPage, ph = (fh + (nyPage - 1) * ovPt) / nyPage;
+  const parts = []; let k = 0;
+  for (let j = nyPage - 1; j >= 0; j--) for (let i = 0; i < nxPage; i++) {
+    const x0 = fr[0] + i * (pw - ovPt), y0 = fr[1] + j * (ph - ovPt);
+    const r = [x0, y0, Math.min(fr[2], x0 + pw), Math.min(fr[3], y0 + ph)];
+    const pt = Object.create(it); k++;
+    pt.name = `${it.name} · P${k}`; pt.panel = { k, n: nxPage * nyPage, col: i + 1, row: nyPage - j };
+    pt.rotate = true;
+    const pg = { key: g.key + '|p' + k, s: g.s, mode: 'rect', poly: null, cut: rectSubs(r), clipRect: r, frame: r, verified: g.verified, gap: g.gap, skip: false, note: '', masks: {} };
+    pg.wPt = (r[2] - r[0]) * g.s; pg.hPt = (r[3] - r[1]) * g.s; pg.wMm = pg.wPt / PT; pg.hMm = pg.hPt / PT; pg.area = pg.wPt * pg.hPt; pg.areaMm = pg.wMm * pg.hMm;
+    pt.geom = pg; parts.push(pt);
+  }
+  warns.unshift(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmadı → ${parts.length} panele bölündü (${nxPage}×${nyPage}, ${ov} mm bindirme, panel ${fmtCm(parts[0].geom.wMm)} × ${fmtCm(parts[0].geom.hMm)} cm).`);
+  return parts;
 }
 const SCORES = { top: (tp, y, x) => tp + x * 1e-7, mix: (tp, y, x) => tp * 0.7 + y * 0.3 + x * 1e-7, center: (tp, y, x) => (tp + y) / 2 + x * 1e-7 };
 function maskRuns(m) {
@@ -979,7 +1023,7 @@ async function runNest() {
   const warns = [];
   const md = mediaDims();
   if (md.usableW <= 10) { setStatus('Medya eni kenar paylarından küçük', 'err'); return }
-  const inst = buildInstances(warns);
+  const inst = buildInstances(warns, md);
   const t = performance.now();
   const shape = S.cutMode === 'shape';
   const sorts = S.sort === 'order' ? ['order'] : [S.sort, ...['area', 'long', 'perim', 'short'].filter(x => x !== S.sort)];
@@ -1033,7 +1077,7 @@ function renderSheets() {
 }
 function renderPreview() {
   const cv = $('#cv'), empty = $('#empty');
-  if (!layout || !layout.sheets.length) { cv.classList.add('hidden'); empty.classList.remove('hidden'); return }
+  if (!layout || !layout.sheets.length) { cv.classList.add('hidden'); empty.classList.remove('hidden'); empty.innerHTML = items.length ? '<b>Hiçbir iş medyaya yerleşmedi.</b>Aşağıdaki uyarılara bak; medya enini, en fazla sayfa boyunu ya da panel bölmeyi kontrol et.' : '<b>Dosyanı yükleyerek başla.</b>Baskı ve kesim aynı yerleşimi kullanır.'; return }
   cv.classList.remove('hidden'); empty.classList.add('hidden');
   const sh = layout.sheets[curSheet]; const stage = $('#stage');
   const zv = +$('#zoom').value;
@@ -1118,9 +1162,9 @@ function renderTable() {
   const t = $('#tbl'); t.innerHTML = '';
   if (!layout) return;
   const rows = new Map();
-  layout.sheets.forEach((s, si) => s.pl.forEach(p => { const k = p.it.id; const r = rows.get(k) || { it: p.it, n: 0, sheets: new Set() }; r.n++; r.sheets.add(si + 1); rows.set(k, r); }));
+  layout.sheets.forEach((s, si) => s.pl.forEach(p => { const k = p.it.id; const r = rows.get(k) || { it: p.it, n: 0, pn: 0, sheets: new Set() }; if (!p.it.panel || p.it.panel.k === 1) r.n++; if (p.it.panel) r.pn = p.it.panel.n; r.sheets.add(si + 1); rows.set(k, r); }));
   t.innerHTML = '<tr><th>İş</th><th>Ölçü (cm)</th><th>Kesim</th><th>Adet</th><th>Sayfa</th></tr>' +
-    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? fmtCm(g.wMm) + ' × ' + fmtCm(g.hMm) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
+    items.map(it => { const r = rows.get(it.id); const g = it.geom; return `<tr><td style="font-family:Inter">${esc(it.name)}</td><td>${g ? fmtCm(g.wMm) + ' × ' + fmtCm(g.hMm) : '–'}</td><td>${g ? (g.mode === 'shape' ? 'Şekil' : 'Dikdörtgen') : '–'}</td><td>${r ? r.n : 0}/${it.qty}${r && r.pn ? ` · ${r.pn} panel` : ''}</td><td>${r ? [...r.sheets].join(', ') : '–'}</td></tr>` }).join('');
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
