@@ -1201,7 +1201,7 @@ function revTextPos(sh) {
   const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
   if (avail < 3) return null;
   let txt = revText() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1) txt += ` · ${sh.copies} KOPYA`;
-  const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5)) * PT / 0.718; // yükseklik: kenar ve iş alanına taşmasın
+  const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5), 0.55 * S.regDia) * PT / 0.718; // büyük harf yüksekliği ≤ nokta çapının %55'i // yükseklik: kenar ve iş alanına taşmasın
   const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
   while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
   const size = sizeFor(txt), w = HB.widthOfTextAtSize(txt, size) / PT;
