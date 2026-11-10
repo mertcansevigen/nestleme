@@ -158,6 +158,17 @@ details .fields{margin-top:10px}
 .toast.on{opacity:1;transform:translateX(-50%)}
 footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
 .hidden{display:none!important}
+.artik{margin-top:10px;background:#141517;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.artik table{width:100%;border-collapse:collapse;font-size:12.5px}
+.artik th{text-align:left;color:var(--dim);font-weight:500;padding:4px 6px}
+.artik td{padding:3px 6px}
+.artik td input{width:100%}
+.artik td.st{font-family:var(--mono);color:var(--muted);white-space:nowrap}
+.artik td.st.on{color:var(--ok)}
+.artik td.st.bad{color:#ff6b6b;font-family:Inter;font-weight:600}
+.artik .x{background:none;border:none;color:var(--dim);cursor:pointer;font-size:15px}
+.artik .x:hover{color:#ff6b6b}
+.artik small{display:block;color:var(--dim);margin-top:6px;line-height:1.5}
 .tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
 .tbl th,.tbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .tbl th{color:var(--muted);font-weight:500}
@@ -205,9 +216,14 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
       <section class="card" id="ayarlar">
         <h2><span class="n">02</span>Folyo ve üretim kuralları</h2>
         <p class="sub">Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.</p>
-        <div class="f full"><span>Folyo baskı arkası gri · rulo eni sistem tarafından seçilir</span><div id="rollCmp"></div></div>
+        <div class="artik" id="artikBox">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b style="font-size:13px">Foreks parça</b> <span style="color:var(--dim);font-size:12px">· isteğe bağlı</span></div><button class="btn sm ghost" id="artikAdd">+ Parça ekle</button></div>
+          <div id="artikTbl" class="hidden"><table style="margin-top:8px"><thead><tr><th>En (cm)</th><th>Boy (cm)</th><th>Adet</th><th>Kullanım</th><th></th></tr></thead><tbody id="artikRows"></tbody></table></div>
+          <small id="artikNote">Parça eklenmezse standart sistem (folyo rulo) çalışır. Eklenen ve baskıya uygun parça varsa işler bu parçalara yerleşir; her parça kendi ölçüsünde baskı + kesim sayfası olur (folyo parçaya kaplanır, Qcut register ile kesilir).</small>
+        </div>
+        <div class="f full" id="rollBox" style="margin-top:12px"><span>Folyo baskı arkası gri · rulo eni sistem tarafından seçilir</span><div id="rollCmp"></div></div>
         <div class="prod" id="prodSum"></div>
-        <div class="f full" style="margin-top:12px"><span>Uygulama zemini (önizlemede en arkada gösterilir)</span>
+        <div class="f full" id="subBox" style="margin-top:12px"><span>Uygulama zemini (önizlemede en arkada gösterilir)</span>
           <div class="seg" id="segSub"><button data-v="none">Yok · yalnız folyo</button><button data-v="foreks">Foreks 156 × 305</button></div></div>
         <ul class="rules">
           <li><b>Kesim:</b> yalnız CUT spot rengi (CMYK 0/100/100/0). CUT yoksa sayfa kenarından dikdörtgen kesilir.</li>
@@ -215,6 +231,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <li><b>Yerleşim:</b> bleed'den bleed'e; şekiller serbest açıyla döndürülür, kesimler birbirini kesmez. Bleed'i doğrulanmayan dosyaya 4 mm boşluk verilir.</li>
           <li><b>Sıralama:</b> en az fire veren dizilim otomatik seçilir. Folyo enini aşan işler bindirmesiz panellere bölünür.</li>
           <li><b>Register:</b> her zaman eklenir — Qcut Platinum, çift başlangıç alt sağda.</li>
+          <li><b>Foreks parça (isteğe bağlı):</b> parça eklenmezse standart sistem çalışır. Eklenirse baskıya uygun parçalar kullanılır (en ≤ 148 cm, boy ≤ 300 cm); her kenarda 1 cm pay + register, en verimli dolum seçilir. Sığmayan iş uyarı olarak gösterilir.</li>
           <li><b>Çift Yüz (foreks):</b> ön yerleşim folyo baskı alanına yapılır; arka folyo aynı alanın yatay aynası (görsel düz okunur), plaka ön yüzden tek kesim. Folyo 2 yüz hesaplanır.</li>
         </ul>
       </section>
@@ -831,6 +848,10 @@ function renderMedia() {
     const c = cmp.find(x => x.w === w);
     return `<tr class="${sel === w ? 'sel' : ''}"><td>${w} cm</td><td>${f(w * 10 - S.pay)} cm</td><td>${c ? (c.ok ? nf(c.len / 1000) + ' m' : 'sığmıyor') : '–'}</td><td>${c && c.ok ? nf(c.m2) + ' m²' : '–'}</td><td>${sel === w ? '✓ seçildi' : ''}</td></tr>`;
   }).join('') + `</table>`;
+  if (layout && layout.artik) {
+    $('#prodSum').innerHTML = layout && layout.artik ? `Taban <b>foreks parça</b> · kullanılan <b>${layout.sheets.reduce((a, s) => a + s.copies, 0)}</b> / ${layout.plateCount} parça · kalan ${layout.free} parça<br>Her parçada kenar payı ${f(layout.md.side)} cm + register · folyo rulosu parça enine göre otomatik (${[...new Set(layout.sheets.map(s => s.rollCm))].join(' / ') || '–'} cm)` : 'Taban <b>foreks parça</b> · parça ölçülerini gir.';
+    return;
+  }
   const md = layout ? layout.md : mediaDims();
   $('#prodSum').innerHTML = `${layout ? 'Seçilen rulo' : 'Varsayılan rulo'} <b>${md.rollCm} cm</b> → baskı eni <b>${f(md.W)} cm</b> (4 cm makine payı) · yerleşim eni <b>${f(md.usableW)} cm</b><br>Kenar payı ${f(md.side)} cm · sayfa boyu en fazla <b>${f(md.L)} cm</b>${layout ? ' · en az folyo harcayan en seçildi' : ''}`;
 }
@@ -884,7 +905,7 @@ function buildInstances(warns, md) {
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
     if (g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: CUT çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
     if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
-    const parts = panelize(it, g, md, warns);
+    const parts = md.plates ? (md.plates.some(pl => fitsMedia(g.wMm, g.hMm, g.gap, pl.md, true)) ? [it] : panelize(it, g, md.big, warns)) : panelize(it, g, md, warns);
     for (let q = 0; q < it.qty; q++) for (const pt of parts) inst.push({ it: pt, idx, q });
   });
   return inst;
@@ -1004,6 +1025,140 @@ async function nestShapes(inst, md, token, prog, SCORE = SCORES.top, fixedRes) {
   }
   return { sheets: sheets.filter(s => s.pl.length).map(s => ({ pl: s.pl, usedL: Math.max(...s.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1] + p.it.geom.gap / 2), 0) })), unplaced, res };
 }
+/* ---------- artık foreks parçaları ---------- */
+const ARTIK_KEY = 'nest.artik.v1';
+let artik = []; // yalnız bu oturum; sayfa açılışında boş → standart sistem
+function saveArtik() {}
+function rollFor(Wmm) { return curMat()[2].find(r => r * 10 - S.pay >= Wmm - 1e-6) || null; } // parçanın basılabileceği en dar rulo
+function plateMd(W, L, rollCm) {
+  const regZone = S.regEdge + S.regDia / 2 + S.regClear;
+  const side = Math.max(S.sideMargin, regZone), head = Math.max(S.headMargin, regZone);
+  return { W, L, side, head, usableW: W - 2 * side, maxUsableL: L - 2 * head, rollCm, roll: true, plate: true };
+}
+// stok listesini tek tek parçalara aç; her parça folyo en az harcanacak yönde (en ≤ baskı eni) durur
+// baskıya uygunluk: en ≤ en geniş baskı eni, boy ≤ en fazla sayfa boyu, register + pay için yeterli büyüklük
+function plateIssue(W, L) {
+  const maxW = Math.max(...curMat()[2]) * 10 - S.pay, maxL = S.maxLen * 10, md = plateMd(W, L, 0);
+  const minW = 2 * S.regEdge + S.regPair + S.regDia; // başlangıç register çifti sığmalı
+  if (W > maxW + 1e-6) return `en ${fmtCm(W)} cm > en geniş baskı eni ${fmtCm(maxW)} cm`;
+  if (L > maxL + 1e-6) return `boy ${fmtCm(L)} cm > en fazla baskı boyu ${fmtCm(maxL)} cm`;
+  if (W < minW || md.usableW <= 0 || md.maxUsableL <= 0) return `çok küçük, register ve kenar payı sığmıyor`;
+  return null;
+}
+let artikStat = new Map(); // satır → uygunsuzluk nedeni
+function platesFromStock(warns) {
+  const out = []; let id = 0; artikStat = new Map();
+  artik.forEach((row, ri) => {
+    const w = (+row.w || 0) * 10, h = (+row.h || 0) * 10, n = Math.max(0, Math.floor(+row.n || 0));
+    if (!(w > 0 && h > 0 && n > 0)) return;
+    const tried = [[w, h], [h, w]].map(([W, L]) => ({ W, L, why: plateIssue(W, L) }));
+    const opts = tried.filter(o => !o.why).map(({ W, L }) => { const r = rollFor(W); return { W, L, r, cost: r * 10 * L }; });
+    if (!opts.length) { const why = tried[0].why === tried[1].why || /küçük/.test(tried[0].why) ? tried[0].why : `${tried[0].why}; döndürülünce ${tried[1].why}`; artikStat.set(ri, why); warns.push(`Foreks parça ${fmtCm(w)} × ${fmtCm(h)} cm baskıya uygun değil (${why}), kullanılmadı.`); return; }
+    const o = opts.reduce((a, b) => (b.cost < a.cost ? b : a));
+    for (let k = 0; k < n; k++) out.push({ id: id++, row: ri, wCm: +row.w, hCm: +row.h, md: plateMd(o.W, o.L, o.r) });
+  });
+  return out;
+}
+async function nestPlates(inst, plates, token, prog, mode, res) {
+  // her adımda: boş parçalar (ölçü başına bir aday) × yerleşim varyantı denenir; en verimli dolum seçilir, kalanlarla devam
+  let free = plates.slice().sort((a, b) => a.md.W * a.md.L - b.md.W * b.md.L), remaining = inst.slice(); const used = [];
+  let t0 = performance.now(); const total = inst.length;
+  const candCache = new Map();
+  const candsOf = it => { let c = candCache.get(it); if (!c) { c = rotationsFor(it).map(r => { const m = getMask(it, r, res); return { r, m, runs: maskRuns(m) } }); candCache.set(it, c); } return c; };
+  const open = pl => { const Wc = Math.floor(pl.md.usableW / res), Lc = Math.floor(pl.md.maxUsableL / res); return { plate: pl, Wc, Lc, cols: Array.from({ length: Math.max(0, Wc) }, () => []), pl: [] }; };
+  const tryOn = (sh, cands, SCORE) => {
+    let best = null;
+    for (const { r, m, runs } of cands) {
+      if (m.cw > sh.Wc || m.maxTop > sh.Lc) continue;
+      for (let x = 0; x + m.cw <= sh.Wc; x++) { const y = lowestY(sh.cols, x, m, runs, sh.Lc); if (y < 0) continue; const sc = SCORE(y + m.maxTop, y, x); if (!best || sc < best.sc) best = { sc, x, y, r, m, runs }; }
+    }
+    return best;
+  };
+  const commit = (sh, b, it) => {
+    const { x, y, r, m, runs } = b;
+    for (let c = 0; c < m.cw; c++) { const rr = runs[c]; for (let k = 0; k < rr.length; k += 2) insertRun(sh.cols[x + c], y + rr[k], y + rr[k + 1]); }
+    sh.pl.push({ it, rot: r, x: x * res + m.pad, y: y * res + m.ch * res - rotDims(it.geom, r)[1] - m.pad });
+  };
+  const fill = (pl, SCORE, firstRot) => {
+    const sh = open(pl), took = []; let area = 0;
+    for (let i = 0; i < remaining.length; i++) {
+      const it = remaining[i].it; let cands = candsOf(it);
+      if (!sh.pl.length && firstRot != null) cands = cands.filter(c => c.r === firstRot);
+      const b = tryOn(sh, cands, SCORE); if (!b) continue;
+      commit(sh, b, it); took.push(i); area += it.geom.areaMm;
+    }
+    return { sh, took, area };
+  };
+  const scores = remaining.length > 150 ? [SCORES.top] : [SCORES.top, SCORES.mix];
+  while (remaining.length && free.length) {
+    if (token !== nestToken) return null;
+    if (performance.now() - t0 > 40) { prog(1 - remaining.length / total); await sleep(0); t0 = performance.now(); }
+    let best = null; const seen = new Set();
+    const firstRots = remaining.length > 150 ? [null] : [null, ...candsOf(remaining[0].it).map(c => c.r)];
+    for (const pl of free) {
+      const key = pl.md.W + 'x' + pl.md.L; if (seen.has(key)) continue; seen.add(key);
+      for (const SC of scores) for (const fr of firstRots) {
+        const f = fill(pl, SC, fr); if (!f.took.length) continue;
+        const A = pl.md.W * pl.md.L, eff = f.area / A;
+        const val = mode === 'eff' ? eff * 1e6 + f.area / 1e6 : f.area + eff; // eff: en verimli parça · area: en çok iş alan parça
+        if (!best || val > best.val + 1e-9) best = { ...f, pl, val };
+      }
+    }
+    if (!best) break;
+    used.push(best.sh); free.splice(free.indexOf(best.pl), 1);
+    const tk = new Set(best.took); remaining = remaining.filter((_, i) => !tk.has(i));
+  }
+  const ext = sh => [Math.max(...sh.pl.map(p => p.x + rotDims(p.it.geom, p.rot)[0] + p.it.geom.gap / 2), 0), Math.max(...sh.pl.map(p => p.y + rotDims(p.it.geom, p.rot)[1] + p.it.geom.gap / 2), 0)];
+  // küçültme: dolu parçanın içeriği daha küçük boş bir parçaya sığıyorsa onu kullan
+  for (const sh of used) {
+    const [uw, ul] = ext(sh); const A = sh.plate.md.W * sh.plate.md.L;
+    const i = free.findIndex(f => f.md.W * f.md.L < A - 1 && f.md.usableW >= uw - 1e-6 && f.md.maxUsableL >= ul - 1e-6);
+    if (i >= 0) { const old = sh.plate; sh.plate = free[i]; free.splice(i, 1, old); free.sort((a, b) => a.md.W * a.md.L - b.md.W * b.md.L); }
+  }
+  return { sheets: used.map(sh => ({ pl: sh.pl, plate: sh.plate, usedL: ext(sh)[1] })), unplaced: remaining, free, res };
+}
+async function runArtik(token, t) {
+  const warns0 = []; const plates = platesFromStock(warns0);
+  if (!plates.length) { layout = null; showBar(-1); renderAll(); renderMedia(); renderArtik(); setStatus(artikStat.size ? 'Girilen foreks parçaların hiçbiri baskıya uygun değil' : 'Foreks parça girilmedi', 'err'); const w = $('#warns'); w.innerHTML = ''; for (const x of warns0) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); } return; }
+  const big = plates.reduce((a, b) => (b.md.usableW * b.md.maxUsableL > a.md.usableW * a.md.maxUsableL ? b : a)).md;
+  const mdAll = { ...big, plates, big };
+  let res = null; const tries = [['area', 'eff'], ['long', 'eff'], ['area', 'area'], ['long', 'area']]; let best = null, step = 0;
+  for (const [sort, h] of tries) {
+    const warns = [...warns0]; const inst = buildInstances(warns, mdAll);
+    if (!res) { const avgW = inst.reduce((s, i) => s + Math.max(i.it.geom.wMm, i.it.geom.hMm), 0) / Math.max(1, inst.length); const rots = inst.reduce((a, i) => a + rotationsFor(i.it).length, 0) / Math.max(1, inst.length); for (const r of [0.5, 1, 2, 3, 4, 6]) { res = r; if (inst.length * rots * (big.usableW / r) * (avgW / r) * 2.5 < 7e7) break; } }
+    const rr = await nestPlates(sortInst(inst, sort), plates, token, x => showBar((step + x) / tries.length), h, res); step++;
+    if (!rr) return;
+    rr.warns = warns; rr.inst = inst;
+    rr.area = rr.sheets.reduce((a, s) => a + s.plate.md.W * s.plate.md.L, 0);
+    rr.cost = rr.unplaced.length * 1e12 + rr.area / 1e3 + rr.sheets.length;
+    if (!best || rr.cost < best.cost - 1e-6) best = rr;
+  }
+  const r = best, warns = r.warns, inst = r.inst;
+  const sheets = r.sheets.map(s => {
+    const md = s.plate.md, W = md.W, L = md.L; // sayfa = artık parçanın tam ölçüsü
+    const pl = s.pl.map(p => ({ ...p, X: md.side + p.x, Y: L - md.head - p.y - rotDims(p.it.geom, p.rot)[1] }));
+    return { W, L, pl, marks: regMarks(W, L), copies: 1, plate: s.plate, rollCm: md.rollCm };
+  });
+  const sig = sh => [Math.round(sh.W), Math.round(sh.L), ...sh.pl.map(p => [p.it.id, p.it.panel ? p.it.panel.k : 0, p.rot, Math.round(p.X * 10), Math.round(p.Y * 10)].join(':')).sort()].join('|');
+  for (let i = 0; i < sheets.length; i++) for (let j = sheets.length - 1; j > i; j--) if (sig(sheets[i]) === sig(sheets[j])) { sheets[i].copies += sheets[j].copies; sheets.splice(j, 1); }
+  if (r.unplaced.length) { const names = [...new Set(r.unplaced.map(u => u.it.name))]; warns.unshift(`${r.unplaced.length} adet foreks parçalara sığmadı: ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}. Bunları folyo rulo ile bas veya parça ekle.`); }
+  const usedRows = new Map(); for (const sh of sheets) usedRows.set(sh.plate.row, (usedRows.get(sh.plate.row) || 0) + sh.copies);
+  layout = { sheets, warns: [...new Set(warns)], res: r.res, md: { ...sheets[0]?.plate.md || big, artik: true }, artik: true, usedRows, free: r.free.length, plateCount: plates.length, cmp: [], ms: performance.now() - t, rev: null, sig: settingsSig() };
+  if (curSheet >= sheets.length) curSheet = 0;
+  const placedN = inst.length - r.unplaced.length;
+  showBar(-1); setStatus(sheets.length ? `${sheets.reduce((a, x) => a + x.copies, 0)} foreks parça · ${placedN}/${inst.length} adet` : `Hiçbir iş foreks parçalara sığmadı · 0/${inst.length} adet`, sheets.length ? 'ok' : 'err');
+  if (!sheets.length) layout.sheets = [];
+  renderAll(); renderMedia(); renderArtik();
+}
+function renderArtik() {
+  const box = $('#artikBox'); if (!box) return;
+  const on = !!(layout && layout.artik); $('#rollBox').classList.toggle('hidden', on); $('#subBox').classList.toggle('hidden', on); $('#artikTbl').classList.toggle('hidden', !artik.length);
+  const tb = $('#artikRows'); const act = document.activeElement; const focus = act && act.dataset && act.dataset.ar ? act.dataset.ar : null;
+  tb.innerHTML = artik.map((r, i) => { const u = layout && layout.artik && layout.usedRows ? layout.usedRows.get(i) || 0 : null; const bad = artikStat.get(i); return `<tr><td><input type="number" min="1" step="0.1" data-ar="${i}:w" value="${r.w ?? ''}"></td><td><input type="number" min="1" step="0.1" data-ar="${i}:h" value="${r.h ?? ''}"></td><td><input type="number" min="1" step="1" data-ar="${i}:n" value="${r.n ?? 1}"></td><td class="st${bad ? ' bad' : u ? ' on' : ''}" title="${bad ? esc(bad) : ''}">${bad ? 'baskıya uygun değil' : u == null ? '–' : `${u}/${r.n || 0} kullanıldı`}</td><td><button class="x" data-del="${i}" title="Sil">✕</button></td></tr>` }).join('') ;
+  tb.querySelectorAll('input').forEach(el => el.onchange = () => { const [i, k] = el.dataset.ar.split(':'); artik[+i][k] = +el.value || 0; saveArtik(); scheduleNest(150); });
+  tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { artik.splice(+b.dataset.del, 1); artikStat = new Map(); saveArtik(); renderArtik(); scheduleNest(100); });
+  if (focus) { const el = tb.querySelector(`[data-ar="${focus}"]`); if (el) el.focus(); }
+}
 function regMarks(W, L) {
   const e = S.regEdge, marks = [];
   const bottomFeed = S.feed[0] === 'B', rightFeed = S.feed[1] === 'R';
@@ -1026,6 +1181,7 @@ async function runNest() {
   setStatus('Yerleşim hesaplanıyor…', 'busy'); showBar(0);
   await sleep(10);
   const t = performance.now();
+  const artikWarns = []; if (artik.length && platesFromStock(artikWarns).length) return runArtik(token, t); // uygun parça varsa artık foreks, yoksa standart
   const widths = curMat()[2];
   const runs = [];
   let fixedRes = null, step = 0; const totalSteps = widths.length + 3;
@@ -1085,11 +1241,11 @@ async function runNest() {
     const names = [...new Set(r.unplaced.map(u => u.it.name))];
     warns.unshift(`${r.unplaced.length} adet yerleşmedi (medyadan büyük): ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}`);
   }
-  layout = { sheets, warns: [...new Set(warns)], res: r.res, md, cmp, ms: performance.now() - t, rev: null, sig: settingsSig() };
+  layout = { sheets, warns: [...new Set([...artikWarns, ...warns])], res: r.res, md, cmp, ms: performance.now() - t, rev: null, sig: settingsSig() };
   if (curSheet >= sheets.length) curSheet = 0;
   const prints = sheets.reduce((a, x) => a + x.copies, 0);
   showBar(-1); setStatus(`${sheets.length} sayfa${prints > sheets.length ? ` (${prints} baskı)` : ''} · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
-  renderAll(); renderMedia();
+  renderAll(); renderMedia(); renderArtik();
 }
 function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
 
@@ -1100,7 +1256,7 @@ function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
   layout.sheets.forEach((s, i) => {
-    const b = document.createElement('button'); b.textContent = `Sayfa ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm${s.copies > 1 ? ` · ${s.copies} kopya` : ''}`;
+    const b = document.createElement('button'); b.textContent = `${s.plate ? 'Parça' : 'Sayfa'} ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm${s.copies > 1 ? ` · ${s.copies} kopya` : ''}`;
     if (i === curSheet) b.className = 'on'; b.onclick = () => { curSheet = i; renderAll() }; el.appendChild(b);
   });
 }
@@ -1128,10 +1284,12 @@ function renderPreview() {
   zoomKeep = false; zoomAnchor = null;
   const c = cv.getContext('2d'); drawScene(c, sc, k, dpr);
   drawSheet(c, sh, k, view, $('#showCut').checked, dpr, sc.px * k, sc.py * k);
+  if (sc.plate) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PARÇA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`, (sc.px + sh.W) * k - 8 * dpr, sc.py * k + sh.L * k - 8 * dpr); c.textAlign = 'left'; }
 }
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
 function sceneOf(sh) {
-  const md = layout.md, roll = md.rollCm * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
+  const md = layout.md, roll = (sh.rollCm || md.rollCm) * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
+  if (sh.plate) return { W: roll, L: sh.L, roll, pad, foreks: false, fx: 0, px: S.pay / 2, py: 0, sh, plate: sh.plate };
   const foreks = S.substrate === 'foreks' || S.duplex;
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
   const fx = 0, px = fx + S.pay / 2; // baskı alanı folyonun sol makine payından başlar (sol üst hizalı)
@@ -1151,9 +1309,16 @@ function drawScene(c, sc, k, dpr) {
   const mp = S.pay / 2 * k; c.beginPath(); c.moveTo(sc.fx * k + mp, 0); c.lineTo(sc.fx * k + mp, sc.L * k); c.moveTo((sc.fx + sc.roll) * k - mp, 0); c.lineTo((sc.fx + sc.roll) * k - mp, sc.L * k); c.stroke(); c.restore(); // makine baskı sınırı
   c.fillStyle = 'rgba(0,0,0,.45)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`;
   const fm2 = sc.roll * sc.sh.L / 1e6;
-  c.textAlign = 'right'; c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, (sc.fx + sc.roll) * k - 8 * dpr, 16 * dpr); c.textAlign = 'left';
+  if (sc.plate) { // artık modunda: folyo etiketi sağdaki boş folyo şeridinde dikey
+    c.save(); c.translate((sc.fx + sc.roll) * k - 8 * dpr, 12 * dpr); c.rotate(Math.PI / 2); c.textAlign = 'left';
+    c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, 0, 0); c.restore();
+  } else
+  c.textAlign = 'right'; if (!sc.plate) c.fillText(`FOLYO ${fmtCm(sc.roll)} × ${fmtCm(sc.sh.L)} cm = ${fm2.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, (sc.fx + sc.roll) * k - 8 * dpr, 16 * dpr); c.textAlign = 'left';
   // baskı alanı gölgesi
   c.fillStyle = '#fff'; c.fillRect(sc.px * k, sc.py * k, sc.sh.W * k, sc.sh.L * k);
+  if (sc.plate) { // artık foreks parçası = baskı sayfası
+    c.save(); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr; c.strokeRect(sc.px * k - dpr, sc.py * k + dpr, sc.sh.W * k + 2 * dpr, sc.sh.L * k - 2 * dpr); c.restore();
+  }
 }
 function drawSheet(c, sh, k, view, showCut, dpr = 1, ox = 0, oy = 0) {
   if (view === 'back') { sh = backSheet(sh); view = 'print'; }
@@ -1228,6 +1393,7 @@ function renderStats() {
   const md = layout.md, roll = md.rollCm * 10; let A = 0, n = 0, Ltot = 0, Atot = 0;
   let prints = 0; layout.sheets.forEach(s => { const c = s.copies || 1; prints += c; Ltot += s.L * c; Atot += s.W * s.L * c; for (const p of s.pl) { A += cutAreaMm(p.it.geom) * c; n += c; } });
   const sh = layout.sheets[curSheet];
+  if (!sh) { for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); } return; }
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
   const faces = S.duplex ? 2 : 1; A *= faces; a2 *= faces;
   const F = roll * Ltot * faces, f2 = sh ? roll * sh.L * faces : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m²';
@@ -1242,7 +1408,20 @@ function renderStats() {
     ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` × ${sh.copies} kopya` : ''}`],
   ];
 
-  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  if (layout.artik) {
+    let P = 0, Fo = 0; layout.sheets.forEach(s => { const c = s.copies || 1; P += s.W * s.L * c; Fo += s.rollCm * 10 * s.L * c * faces; });
+    const p2 = sh ? sh.W * sh.L : 1;
+    st.splice(0, st.length,
+      ['Kullanılan foreks parça', `${prints} parça = ${m2(P)}`],
+      ['Foreks doluluğu', pc(A / faces / P)],
+      ['Net iş alanı', m2(A / faces)],
+      ['Foreks firesi', m2(P - A / faces)],
+      ['Kullanılan folyo', `${faces > 1 ? '2 yüz · ' : ''}${m2(Fo)}`],
+      ['Bu parça', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm · ${pc(a2 / faces / p2)}${sh.copies > 1 ? ` × ${sh.copies}` : ''}`],
+      ['Yerleşen', n + ' adet'],
+      ['Kalan parça', `${layout.free} / ${layout.plateCount}`]);
+  }
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
 }
@@ -1427,10 +1606,10 @@ async function buildCutPdf() {
   return out.save();
 }
 function buildCsv() {
-  const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim']];
+  const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim', 'Taban']];
   layout.sheets.forEach((s, si) => s.pl.forEach(p => {
     const [w, h] = rotDims(p.it.geom, p.rot);
-    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen']);
+    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
   }));
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
@@ -1627,6 +1806,8 @@ let toastT; function toast(t) { const el = $('#toast'); el.textContent = t; el.c
 function syncG() { $$('#gRatio button').forEach(b => b.classList.toggle('on', +b.dataset.g === (S.gRatio || 1))); }
 $$('#gRatio button').forEach(b => b.onclick = () => { S.gRatio = +b.dataset.g; syncG(); for (const it of items) it.scale = S.gRatio * 100; renderItems(); scheduleNest(100); toast(S.gRatio === 10 ? 'Tüm dosyalar 10 kat büyütüldü (1:10)' : 'Tüm dosyalar gerçek ölçüde (1:1)'); });
 segInit('#segSub', 'substrate', () => { renderPreview(); });
+$('#artikAdd').onclick = () => { artik.push({ w: '', h: '', n: 1 }); saveArtik(); renderArtik(); const ins = $$('#artikRows input'); if (ins.length >= 3) ins[ins.length - 3].focus(); };
+renderArtik();
 function syncDup() {
   $$('#dupSel button').forEach(b => b.classList.toggle('on', (+b.dataset.d === 1) === !!S.duplex));
   $('#vBack').classList.toggle('hidden', !S.duplex); $('#dlBack').classList.toggle('hidden', !S.duplex);
@@ -1636,7 +1817,7 @@ function syncDup() {
 $$('#dupSel button').forEach(b => b.onclick = () => { S.duplex = b.dataset.d === '1'; if (S.duplex) pairBacks(); syncDup(); renderItems(); scheduleNest(100); });
 syncDup();
 syncG(); bindSettings(); renderMedia(); updateRevLbl();
-window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest };
+window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest, get artik() { return artik }, set artik(v) { artik = v; saveArtik(); renderArtik(); } };
 </script>
 </body>
 </html>
