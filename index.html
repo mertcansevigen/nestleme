@@ -1558,6 +1558,9 @@ function regOps(sh, forCut) {
   }
   return ops;
 }
+// Büyük kesim konturlarında (çok noktalı harf/logo) spread (...) yığın taşmasına yol açar → parça parça ekle.
+function pushMany(arr, items) { for (let i = 0; i < items.length; i++) arr.push(items[i]); return arr }
+function pushOps(pg, ops) { for (let i = 0; i < ops.length; i += 4000) pg.pushOperators(...ops.slice(i, i + 4000)) }
 async function buildPrintPdf(side = 'front', only = null) {
   const out = await PDFDocument.create();
   let sheets = side === 'back' ? layout.sheets.map(backSheet) : layout.sheets;
@@ -1584,11 +1587,11 @@ async function buildPrintPdf(side = 'front', only = null) {
       const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
       const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
       const cr = g.clipRect; ops.push(P.rectangle(cr[0], cr[1], cr[2] - cr[0], cr[3] - cr[1]), clip(), endPath());
-      if (g.poly) { ops.push(...subsOps(polysToSubs(g.poly)), clipEvenOdd(), endPath()); }
+      if (g.poly) { pushMany(ops, subsOps(polysToSubs(g.poly))); ops.push(clipEvenOdd(), endPath()); }
       ops.push(drawObject(xn), popGraphicsState());
-      pg.pushOperators(...ops);
+      pushOps(pg, ops);
     }
-    pg.pushOperators(...regOps(sh, false));
+    pushOps(pg, regOps(sh, false));
     const tp = revTextPos(sh);
     if (tp) pg.drawText(tp.txt, { x: tp.x * PT, y: tp.base, size: tp.size, font, color: cmyk(0, 0, 0, 1) });
   }
@@ -1600,9 +1603,9 @@ async function buildCutPdf(only = null) {
   for (const sh of (only != null ? [layout.sheets[only]] : layout.sheets)) {
     const pg = out.addPage([sh.W * PT, sh.L * PT]);
     const ops = [pushGraphicsState(), setStrokingCmykColor(0, 1, 1, 0), setLineWidth(S.cutWidth), setLineJoin(LineJoinStyle.Round)];
-    for (const p of sh.pl) { const M = placeMatrix(p.it, p.rot, p.X * PT, p.Y * PT); ops.push(...subsOps(transformSubs(p.it.geom.cut, M)), stroke()); }
+    for (const p of sh.pl) { const M = placeMatrix(p.it, p.rot, p.X * PT, p.Y * PT); pushMany(ops, subsOps(transformSubs(p.it.geom.cut, M))); ops.push(stroke()); }
     ops.push(popGraphicsState());
-    pg.pushOperators(...ops, ...regOps(sh, true));
+    pushOps(pg, pushMany(ops, regOps(sh, true)));
   }
   return out.save();
 }
@@ -1720,9 +1723,9 @@ async function buildDeckPdf() {
       const xn = pg.node.newXObject('Art', img.ref);
       const M = [k, 0, 0, k, ax - fcb[0] * k, ay - fcb[1] * k];
       const ops = [pushGraphicsState(), concatTransformationMatrix(...M)];
-      if (fg.mode === 'shape') ops.push(...subsOps(fg.cut), clip(), endPath());
+      if (fg.mode === 'shape') { pushMany(ops, subsOps(fg.cut)); ops.push(clip(), endPath()); }
       ops.push(concatTransformationMatrix(fcb[2] - fcb[0], 0, 0, fcb[3] - fcb[1], fcb[0], fcb[1]), drawObject(xn), popGraphicsState());
-      pg.pushOperators(...ops);
+      pushOps(pg, ops);
       // filigran (görsel alanına kırpılı)
       pg.pushOperators(pushGraphicsState(), P.rectangle(ax, ay, aw, ah), clip(), endPath());
       for (let j = -1, y = ay - DECK.wmDy; y < ay + ah; j++, y += DECK.wmDy) {
