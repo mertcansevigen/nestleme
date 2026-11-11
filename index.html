@@ -1558,9 +1558,10 @@ function regOps(sh, forCut) {
   }
   return ops;
 }
-async function buildPrintPdf(side = 'front') {
+async function buildPrintPdf(side = 'front', only = null) {
   const out = await PDFDocument.create();
-  const sheets = side === 'back' ? layout.sheets.map(backSheet) : layout.sheets;
+  let sheets = side === 'back' ? layout.sheets.map(backSheet) : layout.sheets;
+  if (only != null) sheets = [sheets[only]]; // tek sayfalık baskı PDF'i
   out.setTitle(`${ensureRev()} ${side === 'back' ? 'arka yüz ' : ''}baskı`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
   const used = [...new Set(sheets.flatMap(s => s.pl.map(p => p.it)))];
   const emb = new Map();
@@ -1593,10 +1594,10 @@ async function buildPrintPdf(side = 'front') {
   }
   return out.save();
 }
-async function buildCutPdf() {
+async function buildCutPdf(only = null) {
   const out = await PDFDocument.create();
   out.setTitle(`${ensureRev()} kesim`); out.setProducer('Nestleme Atölyesi'); out.setCreator('Mertcan SEVİGEN Üretim Atölyesi');
-  for (const sh of layout.sheets) {
+  for (const sh of (only != null ? [layout.sheets[only]] : layout.sheets)) {
     const pg = out.addPage([sh.W * PT, sh.L * PT]);
     const ops = [pushGraphicsState(), setStrokingCmykColor(0, 1, 1, 0), setLineWidth(S.cutWidth), setLineJoin(LineJoinStyle.Round)];
     for (const p of sh.pl) { const M = placeMatrix(p.it, p.rot, p.X * PT, p.Y * PT); ops.push(...subsOps(transformSubs(p.it.geom.cut, M)), stroke()); }
@@ -1630,9 +1631,37 @@ async function withBusy(btn, fn) {
   const t = btn.textContent; btn.disabled = true; btn.textContent = 'Hazırlanıyor…';
   try { await fn() } catch (e) { console.error(e); toast('Hata: ' + (e.message || e)) } finally { btn.disabled = false; btn.textContent = t }
 }
-$('#dlPrint').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf(); if (await saveFile(`${fileBase()}_${S.duplex ? 'ON_' : ''}BASKI.pdf`, b, 'application/pdf')) commitRev(); });
-$('#dlBack').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildPrintPdf('back'); if (await saveFile(`${fileBase()}_ARKA_BASKI.pdf`, b, 'application/pdf')) commitRev(); });
-$('#dlCut').onclick = e => withBusy(e.currentTarget, async () => { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); });
+// Baskı her zaman sayfa başına ayrı PDF olarak iner; çok sayfalı tek baskı PDF'i üretilmez.
+async function downloadPrint(side) {
+  const tag = side === 'back' ? 'ARKA_' : (S.duplex ? 'ON_' : ''), n = layout.sheets.length;
+  if (n === 1) { const b = await buildPrintPdf(side); if (await saveFile(`${fileBase()}_${tag}BASKI.pdf`, b, 'application/pdf')) commitRev(); return; }
+  let saved = 0;
+  for (let i = 0; i < n; i++) {
+    const cp = layout.sheets[i].copies || 1;
+    const name = `${ensureRev()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_${tag}BASKI.pdf`;
+    const b = await buildPrintPdf(side, i);
+    if (!(await saveFile(name, b, 'application/pdf'))) break;
+    saved++; if (i < n - 1) await sleep(400);
+  }
+  if (saved) { commitRev(); toast(`${saved}/${n} baskı sayfası ayrı PDF olarak indirildi`); }
+}
+$('#dlPrint').onclick = e => withBusy(e.currentTarget, () => downloadPrint('front'));
+$('#dlBack').onclick = e => withBusy(e.currentTarget, () => downloadPrint('back'));
+// Kesim de her zaman sayfa başına ayrı PDF; baskı dosyalarıyla aynı SAYFA numarasını taşır.
+async function downloadCut() {
+  const n = layout.sheets.length;
+  if (n === 1) { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); return; }
+  let saved = 0;
+  for (let i = 0; i < n; i++) {
+    const cp = layout.sheets[i].copies || 1;
+    const name = `${ensureRev()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_KESIM.pdf`;
+    const b = await buildCutPdf(i);
+    if (!(await saveFile(name, b, 'application/pdf'))) break;
+    saved++; if (i < n - 1) await sleep(400);
+  }
+  if (saved) toast(`${saved}/${n} kesim sayfası ayrı PDF olarak indirildi`);
+}
+$('#dlCut').onclick = e => withBusy(e.currentTarget, downloadCut);
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
 
 /* ---------------- sunum: müşteriye görsel onay paftası ---------------- */
