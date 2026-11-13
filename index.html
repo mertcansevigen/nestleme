@@ -856,7 +856,7 @@ function renderMedia() {
     const c = cmp.find(x => x.w === w);
     return `<tr class="${sel === w ? 'sel' : ''}"><td>${w} cm</td><td>${f(w * 10 - S.pay)} cm</td><td>${c ? (c.ok ? nf(c.len / 1000) + ' m' : 'sığmıyor') : '–'}</td><td>${c && c.ok ? nf(c.m2) + ' m²' : '–'}</td><td>${sel === w ? '✓ seçildi' : ''}</td></tr>`;
   }).join('') + `</table>`;
-  if (S.fx) { const m = fxMd(); $('#prodSum').innerHTML = `Taban <b>foreks plaka ${fmtCm(m.W)} × ${fmtCm(m.L)} cm</b> · baskısız kesim${layout && layout.fx ? ` · gereken <b>${layout.sheets.reduce((a, x) => a + x.copies, 0)} plaka</b>` : ''}<br>Parçalar arası ${fmtCm(S.fxGap)} cm · plaka kenar payı ${fmtCm(S.fxEdge)} cm · register yok`; return; }
+  if (S.fx) { const m = fxMd(); $('#prodSum').innerHTML = `Taban <b>foreks plaka ${fmtCm(m.W)} × ${fmtCm(m.L)} cm</b> · baskısız kesim${layout && layout.fx ? ` · gereken <b>${layout.sheets.reduce((a, x) => a + x.copies, 0)} plaka</b>` : ''}<br>Foreks m² = plaka eni × kullanılan boy · parçalar arası ${fmtCm(S.fxGap)} cm · plaka kenar payı ${fmtCm(S.fxEdge)} cm · register yok`; return; }
   if (layout && layout.artik) {
     $('#prodSum').innerHTML = layout && layout.artik ? `Taban <b>foreks parça</b> · kullanılan <b>${layout.sheets.reduce((a, s) => a + s.copies, 0)}</b> / ${layout.plateCount} parça · kalan ${layout.free} parça<br>Her parçada kenar payı ${f(layout.md.side)} cm + register · folyo rulosu parça enine göre otomatik (${[...new Set(layout.sheets.map(s => s.rollCm))].join(' / ') || '–'} cm)` : 'Taban <b>foreks parça</b> · parça ölçülerini gir.';
     return;
@@ -1160,6 +1160,7 @@ async function runArtik(token, t) {
   renderAll(); renderMedia(); renderArtik();
 }
 /* ---------- foreks kesim (baskısız): tam plakaya dizim ---------- */
+function fxUsedL(sh) { return Math.min(sh.L, Math.ceil(sh.usedL + 2 * S.fxEdge - S.fxGap)); } // plaka üstünden son kesime + kenar payı (mm)
 function fxMd() {
   const W = Math.max(100, (+S.fxW || 156) * 10), L = Math.max(100, (+S.fxL || 305) * 10), m = Math.max(0, S.fxEdge - S.fxGap / 2); // maske her yanda boşluk/2 taşır → kesim kenardan tam fxEdge
   return { W, L, side: m, head: m, usableW: W - 2 * m, maxUsableL: L - 2 * m, rollCm: 0, fx: true };
@@ -1324,7 +1325,9 @@ function renderPreview() {
   zoomKeep = false; zoomAnchor = null;
   const c = cv.getContext('2d'); drawScene(c, sc, k, dpr);
   drawSheet(c, sh, k, view, $('#showCut').checked, dpr, sc.px * k, sc.py * k);
-  if (sc.fxp) { c.setTransform(1, 0, 0, 1, 0, 0); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr; c.strokeRect(dpr, dpr, sh.W * k - 2 * dpr, sh.L * k - 2 * dpr); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PLAKA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` · ${sh.copies} KOPYA` : ''}`, sh.W * k - 8 * dpr, sh.L * k - 8 * dpr); c.textAlign = 'left'; }
+  if (sc.fxp) { c.setTransform(1, 0, 0, 1, 0, 0); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr; c.strokeRect(dpr, dpr, sh.W * k - 2 * dpr, sh.L * k - 2 * dpr); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PLAKA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` · ${sh.copies} KOPYA` : ''}`, sh.W * k - 8 * dpr, sh.L * k - 8 * dpr);
+    const u = fxUsedL(sh); if (sh.L - u >= 10) { c.fillStyle = 'rgba(201,162,39,.10)'; c.fillRect(2 * dpr, u * k, sh.W * k - 4 * dpr, (sh.L - u) * k - 2 * dpr); c.save(); c.setLineDash([8 * dpr, 6 * dpr]); c.lineWidth = 1.5 * dpr; c.beginPath(); c.moveTo(0, u * k); c.lineTo(sh.W * k, u * k); c.stroke(); c.restore(); c.fillStyle = '#9a7a10'; c.fillText(`KULLANILAN ${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${(sh.W * u / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, sh.W * k - 8 * dpr, u * k + 16 * dpr); }
+    c.textAlign = 'left'; }
   if (sc.plate) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PARÇA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`, (sc.px + sh.W) * k - 8 * dpr, sc.py * k + sh.L * k - 8 * dpr); c.textAlign = 'left'; }
 }
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
@@ -1453,16 +1456,18 @@ function renderStats() {
   ];
 
   if (layout.fx) {
-    const P = Atot, p2 = sh.W * sh.L, used = sh.usedL + 2 * S.fxEdge - S.fxGap; // kullanılan boy: üst kenardan son kesime + kenar payı
+    // kullanılan foreks = plaka eni × kullanılan boy (plakanın tamamı değil); kalan parça ayrıca gösterilir
+    let P = 0; layout.sheets.forEach(s => P += s.W * fxUsedL(s) * (s.copies || 1));
+    const u = fxUsedL(sh), p2 = sh.W * u, rest = sh.L - u;
     st.splice(0, st.length,
-      ['Kullanılan foreks', `${prints} plaka × ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm = ${m2(P)}`],
+      ['Kullanılan foreks', prints === 1 ? `${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${m2(P)}` : `${prints} plakada toplam ${m2(P)}`],
       ['Foreks doluluğu', pc(A / P)],
       ['Net iş alanı', m2(A)],
       ['Fire', m2(P - A)],
-      ['Bu plaka', `${pc(a2 / p2)} · net ${m2(a2)}${sh.copies > 1 ? ` × ${sh.copies}` : ''}`],
-      ['Bu plakada kullanılan boy', `${fmtCm(Math.min(sh.L, used))} / ${fmtCm(sh.L)} cm`],
+      ['Bu plakada kullanılan', `${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${m2(p2)}${sh.copies > 1 ? ` × ${sh.copies}` : ''}`],
+      ['Bu plakadan kalan', rest >= 1 ? `${fmtCm(sh.W)} × ${fmtCm(rest)} cm = ${m2(sh.W * rest)}` : 'yok'],
       ['Yerleşen', n + ' adet'],
-      ['Plaka', `${prints} adet`]);
+      ['Plaka', `${prints} adet · ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`]);
   }
   if (layout.artik) {
     let P = 0, Fo = 0; layout.sheets.forEach(s => { const c = s.copies || 1; P += s.W * s.L * c; Fo += s.rollCm * 10 * s.L * c * faces; });
@@ -1477,7 +1482,7 @@ function renderStats() {
       ['Yerleşen', n + ' adet'],
       ['Kalan parça', `${layout.free} / ${layout.plateCount}`]);
   }
-  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' || k === 'Kullanılan foreks' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' || k === 'Kullanılan foreks' || k === 'Bu plakada kullanılan' || k === 'Bu plakadan kalan' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
 }
