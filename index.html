@@ -1325,15 +1325,16 @@ function renderPreview() {
   zoomKeep = false; zoomAnchor = null;
   const c = cv.getContext('2d'); drawScene(c, sc, k, dpr);
   drawSheet(c, sh, k, view, $('#showCut').checked, dpr, sc.px * k, sc.py * k);
-  if (sc.fxp) { c.setTransform(1, 0, 0, 1, 0, 0); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr; c.strokeRect(dpr, dpr, sh.W * k - 2 * dpr, sh.L * k - 2 * dpr); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PLAKA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` · ${sh.copies} KOPYA` : ''}`, sh.W * k - 8 * dpr, sh.L * k - 8 * dpr);
-    const u = fxUsedL(sh); if (sh.L - u >= 10) { c.fillStyle = 'rgba(201,162,39,.10)'; c.fillRect(2 * dpr, u * k, sh.W * k - 4 * dpr, (sh.L - u) * k - 2 * dpr); c.save(); c.setLineDash([8 * dpr, 6 * dpr]); c.lineWidth = 1.5 * dpr; c.beginPath(); c.moveTo(0, u * k); c.lineTo(sh.W * k, u * k); c.stroke(); c.restore(); c.fillStyle = '#9a7a10'; c.fillText(`KULLANILAN ${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${(sh.W * u / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} m²`, sh.W * k - 8 * dpr, u * k + 16 * dpr); }
-    c.textAlign = 'left'; }
+  if (sc.fxp) { // yalnız kullanılan alan gösterilir: üst + yan kenarlar plaka kenarı (düz), alt kenar kullanım sınırı (kesik)
+    const w = sh.W * k, h = sc.L * k, full = sc.L >= sh.L - 0.5; c.setTransform(1, 0, 0, 1, 0, 0); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr;
+    c.beginPath(); c.moveTo(dpr, h); c.lineTo(dpr, dpr); c.lineTo(w - dpr, dpr); c.lineTo(w - dpr, h); c.stroke();
+    c.save(); if (!full) c.setLineDash([8 * dpr, 6 * dpr]); c.beginPath(); c.moveTo(0, h - dpr); c.lineTo(w, h - dpr); c.stroke(); c.restore(); }
   if (sc.plate) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PARÇA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`, (sc.px + sh.W) * k - 8 * dpr, sc.py * k + sh.L * k - 8 * dpr); c.textAlign = 'left'; }
 }
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
 function sceneOf(sh) {
   const md = layout.md, roll = (sh.rollCm || md.rollCm) * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
-  if (sh.fx) return { W: sh.W, L: sh.L, roll: 0, pad, foreks: false, fx: 0, px: 0, py: 0, sh, fxp: true };
+  if (sh.fx) return { W: sh.W, L: fxUsedL(sh), roll: 0, pad, foreks: false, fx: 0, px: 0, py: 0, sh, fxp: true };
   if (sh.plate) return { W: roll, L: sh.L, roll, pad, foreks: false, fx: 0, px: S.pay / 2, py: 0, sh, plate: sh.plate };
   const foreks = S.substrate === 'foreks' || S.duplex;
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
