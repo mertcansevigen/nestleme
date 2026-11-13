@@ -200,7 +200,8 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
-        <div class="gscale dup"><div><b>Çift Yüz · foreks</b><small>Ön + arka yüz folyosu; arka yerleşim aynalı, plaka tek kesim</small></div><div class="rt" id="dupSel"><button data-d="0">Kapalı</button><button data-d="1">Çift Yüz</button></div></div>
+        <div class="gscale"><div><b>Üretim türü</b><small>Foreks kesim baskısızdır; plakadan kesilir</small></div><div class="rt" id="fxSel"><button data-f="0">Folyo baskı</button><button data-f="1">Foreks kesim</button></div></div>
+        <div class="gscale dup" id="dupBox"><div><b>Çift Yüz · foreks</b><small>Ön + arka yüz folyosu; arka yerleşim aynalı, plaka tek kesim</small></div><div class="rt" id="dupSel"><button data-d="0">Kapalı</button><button data-d="1">Çift Yüz</button></div></div>
         <div class="gscale"><div><b>Tüm dosyaların ölçeği</b><small>1:10 seçilirse yüklenen her şey 10 kat büyütülür</small></div><div class="rt" id="gRatio"><button data-g="1">1:1</button><button data-g="10">1:10</button></div></div>
         <label class="drop" id="drop">
           <input type="file" id="fileIn" accept=".pdf,.ai,application/pdf,application/postscript,application/illustrator" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
@@ -216,6 +217,11 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
       <section class="card" id="ayarlar">
         <h2><span class="n">02</span>Folyo ve üretim kuralları</h2>
         <p class="sub">Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.</p>
+        <div class="artik hidden" id="fxBox">
+          <b style="font-size:13px">Foreks plaka</b> <span style="color:var(--dim);font-size:12px">· baskısız kesim</span>
+          <table style="margin-top:8px"><thead><tr><th>En (cm)</th><th>Boy (cm)</th><th></th></tr></thead><tbody><tr><td><input type="number" min="10" step="0.1" id="fxW"></td><td><input type="number" min="10" step="0.1" id="fxL"></td><td><button class="btn sm ghost" id="fxStd">156 × 305</button></td></tr></tbody></table>
+          <small>Standart plaka 156 × 305 cm; farklı plaka için ölçüyü değiştir. Parçalar arası 10 mm, plaka kenarından 10 mm pay (kesim çizgisinden ölçülür). Gereken plaka adedi ve m² otomatik hesaplanır. Register ve baskı yoktur.</small>
+        </div>
         <div class="artik" id="artikBox">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b style="font-size:13px">Foreks parça</b> <span style="color:var(--dim);font-size:12px">· isteğe bağlı</span></div><button class="btn sm ghost" id="artikAdd">+ Parça ekle</button></div>
           <div id="artikTbl" class="hidden"><table style="margin-top:8px"><thead><tr><th>En (cm)</th><th>Boy (cm)</th><th>Adet</th><th>Kullanım</th><th></th></tr></thead><tbody id="artikRows"></tbody></table></div>
@@ -291,14 +297,15 @@ const DEFAULTS = {
   material: 'folyo-arkasi-gri', roll: 137, pay: 40, maxLen: 300, sideMargin: 10, headMargin: 10,
   cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false
+  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false,
+  fx: false, fxW: 156, fxL: 305, fxGap: 10, fxEdge: 10 // Foreks kesim (baskısız): plaka cm, parça arası ve kenar payı mm
 };
 const FIXED = { ...DEFAULTS }; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
 // Ana site (engine.mjs) malzeme listesi: [kod, ad, rulo enleri cm, birim fiyat]
 const MATERIALS = [['folyo-arkasi-gri','Folyo baskı arkası gri',[105,126,137,152],164],['seffaf-folyo','Şeffaf folyo',[105],182],['kumlu-folyo-baski','Kumlu folyo baskı',[126,152],232],['kumlu-folyo-kesim','Kumlu folyo kesim',[126,152],211],['ultra-clear','Ultra Clear',[105],307],['cast-3m','3M Cast',[137],784],['yari-cast-3m','3M yarı Cast',[137],406],['reflektif','Reflektif',[126],354],['one-way-vision','One Way Vision',[105,152],177],['oracal-renk','Oracal renk folyosu',[126],250],['lumen-folyo','Lümen folyo',[126],647],['baskes-folyo','Baskes folyo',[105,126,137,152],230]];
 
 const LS = { get(k) { try { return localStorage.getItem(k) } catch { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch {} } };
-let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings.v3') || '{}')), ...FIXED };
+let S = { ...DEFAULTS, ...(JSON.parse(LS.get('nest.settings.v3') || '{}')), ...FIXED }; // FIXED: fx kapalı ve plaka 156×305 ile açılır (unutulan mod yeni işi etkilemez)
 
 /* ---------------- durum ---------------- */
 const files = [];   // {id,name,size,bytes,doc(pdf-lib),js(pdf.js)}
@@ -725,12 +732,12 @@ async function renderThumbJs(it) {
 }
 
 /* ---------------- geometri ---------------- */
-function geomKey(it) { return [S.cutMode, S.bleed, S.cutSource, S.gapMode, S.gapUnverified, S.gapManual, it.scale].join('|') }
+function geomKey(it) { return [S.fx ? 'fx' + S.fxGap : '', S.cutMode, S.bleed, S.cutSource, S.gapMode, S.gapUnverified, S.gapManual, it.scale].join('|') }
 function computeGeom(it) {
   const key = geomKey(it); if (it.geom && it.geom.key === key) return it.geom;
-  const s = it.scale / 100; const bPt = S.bleed * PT / s;
+  const s = it.scale / 100; const bPt = S.fx ? 0 : S.bleed * PT / s; // foreks kesimde bleed yok: ayak izi = kesim çizgisi
   const an = it.an; const pb = it.pageBox;
-  const bleedBox = an.bleed.length ? an.bleed.reduce((a, b) => ((b[2] - b[0]) * (b[3] - b[1]) > (a[2] - a[0]) * (a[3] - a[1]) ? b : a)) : null;
+  const bleedBox = an.bleed.length && !S.fx ? an.bleed.reduce((a, b) => ((b[2] - b[0]) * (b[3] - b[1]) > (a[2] - a[0]) * (a[3] - a[1]) ? b : a)) : null;
   const cutBB = an.cut.length ? subsBBox(an.cut) : null;
   const g = { key, s, mode: 'rect', poly: null, cut: null, clipRect: null, frame: null, verified: false, area: 0, note: '' };
   const within = (inner, outer, tol = 0.5) => inner[0] >= outer[0] - tol && inner[1] >= outer[1] - tol && inner[2] <= outer[2] + tol && inner[3] <= outer[3] + tol;
@@ -760,12 +767,13 @@ function computeGeom(it) {
       const tb = it.trimBox; const hasTrim = tb && (tb[0] - pb[0] > 1 || pb[2] - tb[2] > 1);
       g.frame = pb.slice(); g.cut = rectSubs(hasTrim ? tb : pb); g.verified = !!hasTrim; g.note = hasTrim ? 'TrimBox' : 'sayfa kenarı';
     }
+    if (S.fx) g.frame = subsBBox(g.cut);
     g.clipRect = g.frame;
     g.area = (g.frame[2] - g.frame[0]) * (g.frame[3] - g.frame[1]) * s * s;
   }
   g.wPt = (g.frame[2] - g.frame[0]) * s; g.hPt = (g.frame[3] - g.frame[1]) * s;
   g.wMm = g.wPt / PT; g.hMm = g.hPt / PT; g.areaMm = g.area / PT / PT;
-  g.gap = S.gapMode === 'manual' ? S.gapManual : (g.verified ? 0 : S.gapUnverified);
+  g.gap = S.fx ? S.fxGap : S.gapMode === 'manual' ? S.gapManual : (g.verified ? 0 : S.gapUnverified);
   g.skip = S.gapMode === 'verified' && !g.verified;
   g.masks = {};
   it.geom = g; return g;
@@ -848,6 +856,7 @@ function renderMedia() {
     const c = cmp.find(x => x.w === w);
     return `<tr class="${sel === w ? 'sel' : ''}"><td>${w} cm</td><td>${f(w * 10 - S.pay)} cm</td><td>${c ? (c.ok ? nf(c.len / 1000) + ' m' : 'sığmıyor') : '–'}</td><td>${c && c.ok ? nf(c.m2) + ' m²' : '–'}</td><td>${sel === w ? '✓ seçildi' : ''}</td></tr>`;
   }).join('') + `</table>`;
+  if (S.fx) { const m = fxMd(); $('#prodSum').innerHTML = `Taban <b>foreks plaka ${fmtCm(m.W)} × ${fmtCm(m.L)} cm</b> · baskısız kesim${layout && layout.fx ? ` · gereken <b>${layout.sheets.reduce((a, x) => a + x.copies, 0)} plaka</b>` : ''}<br>Parçalar arası ${fmtCm(S.fxGap)} cm · plaka kenar payı ${fmtCm(S.fxEdge)} cm · register yok`; return; }
   if (layout && layout.artik) {
     $('#prodSum').innerHTML = layout && layout.artik ? `Taban <b>foreks parça</b> · kullanılan <b>${layout.sheets.reduce((a, s) => a + s.copies, 0)}</b> / ${layout.plateCount} parça · kalan ${layout.free} parça<br>Her parçada kenar payı ${f(layout.md.side)} cm + register · folyo rulosu parça enine göre otomatik (${[...new Set(layout.sheets.map(s => s.rollCm))].join(' / ') || '–'} cm)` : 'Taban <b>foreks parça</b> · parça ölçülerini gir.';
     return;
@@ -904,7 +913,7 @@ function buildInstances(warns, md) {
     if (S.duplex) { const b = backOfFront(it); if (b !== it) { b.scale = it.scale; const bg = computeGeom(b); const fc = subsBBox(g.cut), bc = subsBBox(bg.cut); if (Math.abs((fc[2] - fc[0]) - (bc[2] - bc[0])) * g.s / PT > 1 || Math.abs((fc[3] - fc[1]) - (bc[3] - bc[1])) * g.s / PT > 1) warns.push(`${it.name}: arka yüz (${b.name}) kesim ölçüsü ön yüzle uyuşmuyor.`); } }
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
     if (g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: CUT çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
-    if (!g.verified && S.gapMode === 'auto') warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
+    if (!g.verified && S.gapMode === 'auto' && !S.fx) warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
     const parts = md.plates ? (md.plates.some(pl => fitsMedia(g.wMm, g.hMm, g.gap, pl.md, true)) ? [it] : panelize(it, g, md.big, warns)) : panelize(it, g, md, warns);
     for (let q = 0; q < it.qty; q++) for (const pt of parts) inst.push({ it: pt, idx, q });
   });
@@ -1150,8 +1159,38 @@ async function runArtik(token, t) {
   if (!sheets.length) layout.sheets = [];
   renderAll(); renderMedia(); renderArtik();
 }
+/* ---------- foreks kesim (baskısız): tam plakaya dizim ---------- */
+function fxMd() {
+  const W = Math.max(100, (+S.fxW || 156) * 10), L = Math.max(100, (+S.fxL || 305) * 10), m = Math.max(0, S.fxEdge - S.fxGap / 2); // maske her yanda boşluk/2 taşır → kesim kenardan tam fxEdge
+  return { W, L, side: m, head: m, usableW: W - 2 * m, maxUsableL: L - 2 * m, rollCm: 0, fx: true };
+}
+async function runFx(token, t) {
+  const md = fxMd(); let best = null, fixedRes = null, step = 0; const tries = [['area', 'top'], ['long', 'top'], ['perim', 'mix'], ['area', 'center']];
+  for (const [sort, h] of tries) {
+    const warns = []; const inst = buildInstances(warns, md);
+    const rr = await nestShapes(sortInst(inst, sort), md, token, x => showBar((step + x) / tries.length), SCORES[h], fixedRes); step++;
+    if (!rr) return;
+    fixedRes = fixedRes || rr.res; rr.warns = warns; rr.inst = inst;
+    const last = rr.sheets.length ? rr.sheets[rr.sheets.length - 1].usedL : 0;
+    rr.cost = rr.unplaced.length * 1e9 + rr.sheets.length * 1e5 + last; // önce en az plaka, sonra son plakada en kısa kullanım
+    if (!best || rr.cost < best.cost - 1e-6) best = rr;
+  }
+  const r = best, warns = r.warns, inst = r.inst;
+  const sheets = r.sheets.map(s => ({ W: md.W, L: md.L, usedL: s.usedL, marks: [], copies: 1, fx: true,
+    pl: s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.L - md.head - p.y - rotDims(p.it.geom, p.rot)[1] })) }));
+  const sig = sh => sh.pl.map(p => [p.it.id, p.it.panel ? p.it.panel.k : 0, p.rot, Math.round(p.X * 10), Math.round(p.Y * 10)].join(':')).sort().join('|');
+  for (let i = 0; i < sheets.length; i++) for (let j = sheets.length - 1; j > i; j--) if (sig(sheets[i]) === sig(sheets[j])) { sheets[i].copies += sheets[j].copies; sheets.splice(j, 1); }
+  if (r.unplaced.length) { const names = [...new Set(r.unplaced.map(u => u.it.name))]; warns.unshift(`${r.unplaced.length} adet plakaya sığmadı: ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}`); }
+  layout = { sheets, warns: [...new Set(warns)], res: r.res, md, fx: true, cmp: [], ms: performance.now() - t, rev: null, sig: settingsSig() };
+  if (curSheet >= sheets.length) curSheet = 0;
+  const plates = sheets.reduce((a, x) => a + x.copies, 0);
+  showBar(-1); setStatus(`${plates} foreks plaka · ${inst.length - r.unplaced.length}/${inst.length} adet`, sheets.length ? 'ok' : 'err');
+  renderAll(); renderMedia(); renderArtik();
+}
 function renderArtik() {
   const box = $('#artikBox'); if (!box) return;
+  if (S.fx) { ['#artikBox', '#rollBox', '#subBox'].forEach(q => $(q).classList.add('hidden')); return; }
+  box.classList.remove('hidden');
   const on = !!(layout && layout.artik); $('#rollBox').classList.toggle('hidden', on); $('#subBox').classList.toggle('hidden', on); $('#artikTbl').classList.toggle('hidden', !artik.length);
   const tb = $('#artikRows'); const act = document.activeElement; const focus = act && act.dataset && act.dataset.ar ? act.dataset.ar : null;
   tb.innerHTML = artik.map((r, i) => { const u = layout && layout.artik && layout.usedRows ? layout.usedRows.get(i) || 0 : null; const bad = artikStat.get(i); return `<tr><td><input type="number" min="1" step="0.1" data-ar="${i}:w" value="${r.w ?? ''}"></td><td><input type="number" min="1" step="0.1" data-ar="${i}:h" value="${r.h ?? ''}"></td><td><input type="number" min="1" step="1" data-ar="${i}:n" value="${r.n ?? 1}"></td><td class="st${bad ? ' bad' : u ? ' on' : ''}" title="${bad ? esc(bad) : ''}">${bad ? 'baskıya uygun değil' : u == null ? '–' : `${u}/${r.n || 0} kullanıldı`}</td><td><button class="x" data-del="${i}" title="Sil">✕</button></td></tr>` }).join('') ;
@@ -1181,6 +1220,7 @@ async function runNest() {
   setStatus('Yerleşim hesaplanıyor…', 'busy'); showBar(0);
   await sleep(10);
   const t = performance.now();
+  if (S.fx) return runFx(token, t);
   const artikWarns = []; if (artik.length && platesFromStock(artikWarns).length) return runArtik(token, t); // uygun parça varsa artık foreks, yoksa standart
   const widths = curMat()[2];
   const runs = [];
@@ -1256,7 +1296,7 @@ function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
   layout.sheets.forEach((s, i) => {
-    const b = document.createElement('button'); b.textContent = `${s.plate ? 'Parça' : 'Sayfa'} ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm${s.copies > 1 ? ` · ${s.copies} kopya` : ''}`;
+    const b = document.createElement('button'); b.textContent = `${s.fx ? 'Plaka' : s.plate ? 'Parça' : 'Sayfa'} ${i + 1} · ${(s.W / 10).toFixed(1)}×${(s.L / 10).toFixed(1)} cm${s.copies > 1 ? ` · ${s.copies} kopya` : ''}`;
     if (i === curSheet) b.className = 'on'; b.onclick = () => { curSheet = i; renderAll() }; el.appendChild(b);
   });
 }
@@ -1284,11 +1324,13 @@ function renderPreview() {
   zoomKeep = false; zoomAnchor = null;
   const c = cv.getContext('2d'); drawScene(c, sc, k, dpr);
   drawSheet(c, sh, k, view, $('#showCut').checked, dpr, sc.px * k, sc.py * k);
+  if (sc.fxp) { c.setTransform(1, 0, 0, 1, 0, 0); c.strokeStyle = '#c9a227'; c.lineWidth = 2 * dpr; c.strokeRect(dpr, dpr, sh.W * k - 2 * dpr, sh.L * k - 2 * dpr); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PLAKA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` · ${sh.copies} KOPYA` : ''}`, sh.W * k - 8 * dpr, sh.L * k - 8 * dpr); c.textAlign = 'left'; }
   if (sc.plate) { c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#9a7a10'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right'; c.fillText(`FOREKS PARÇA ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`, (sc.px + sh.W) * k - 8 * dpr, sc.py * k + sh.L * k - 8 * dpr); c.textAlign = 'left'; }
 }
 // zemin sahnesi: (varsa) foreks plaka → seçilen folyo rulosu → baskı alanı
 function sceneOf(sh) {
   const md = layout.md, roll = (sh.rollCm || md.rollCm) * 10, pad = 0; // folyo boyu = baskı boyu (kullanılan folyo)
+  if (sh.fx) return { W: sh.W, L: sh.L, roll: 0, pad, foreks: false, fx: 0, px: 0, py: 0, sh, fxp: true };
   if (sh.plate) return { W: roll, L: sh.L, roll, pad, foreks: false, fx: 0, px: S.pay / 2, py: 0, sh, plate: sh.plate };
   const foreks = S.substrate === 'foreks' || S.duplex;
   const W = Math.max(roll, foreks ? 1560 : 0) + (foreks ? 0 : 0), L = sh.L + 2 * pad;
@@ -1303,6 +1345,7 @@ function drawScene(c, sc, k, dpr) {
     c.fillStyle = 'rgba(236,230,214,.55)'; c.font = `600 ${Math.max(10, 11 * dpr)}px Inter, sans-serif`; c.textAlign = 'right';
     c.fillText('FOREKS 156 × 305 cm', 1560 * k - 8 * dpr, sc.L * k - 8 * dpr); c.textAlign = 'left';
   }
+  if (sc.fxp) { c.fillStyle = '#fff'; c.fillRect(0, 0, sc.sh.W * k, sc.sh.L * k); return; } // foreks kesim: sahne = plaka
   // folyo rulosu
   c.fillStyle = '#d9dbe0'; c.fillRect(sc.fx * k, 0, sc.roll * k, sc.L * k);
   c.save(); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = dpr; c.setLineDash([4 * dpr, 4 * dpr]);
@@ -1327,7 +1370,8 @@ function drawSheet(c, sh, k, view, showCut, dpr = 1, ox = 0, oy = 0) {
   const md = layout.md;
   // kullanılabilir alan
   c.save(); c.strokeStyle = 'rgba(58,123,255,.55)'; c.setLineDash([6 * dpr, 5 * dpr]); c.lineWidth = dpr;
-  c.strokeRect(ox + md.side * k, oy + md.head * k, (sh.W - 2 * md.side) * k, (sh.L - 2 * md.head) * k); c.restore();
+  const es = sh.fx ? S.fxEdge : md.side, eh = sh.fx ? S.fxEdge : md.head;
+  c.strokeRect(ox + es * k, oy + eh * k, (sh.W - 2 * es) * k, (sh.L - 2 * eh) * k); c.restore();
   for (const p of sh.pl) {
     const it = p.it, g = it.geom;
     const M = placeMatrix(it, p.rot, p.X * PT, p.Y * PT);
@@ -1408,6 +1452,18 @@ function renderStats() {
     ['Baskı alanı', `${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm${sh.copies > 1 ? ` × ${sh.copies} kopya` : ''}`],
   ];
 
+  if (layout.fx) {
+    const P = Atot, p2 = sh.W * sh.L, used = sh.usedL + 2 * S.fxEdge - S.fxGap; // kullanılan boy: üst kenardan son kesime + kenar payı
+    st.splice(0, st.length,
+      ['Kullanılan foreks', `${prints} plaka × ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm = ${m2(P)}`],
+      ['Foreks doluluğu', pc(A / P)],
+      ['Net iş alanı', m2(A)],
+      ['Fire', m2(P - A)],
+      ['Bu plaka', `${pc(a2 / p2)} · net ${m2(a2)}${sh.copies > 1 ? ` × ${sh.copies}` : ''}`],
+      ['Bu plakada kullanılan boy', `${fmtCm(Math.min(sh.L, used))} / ${fmtCm(sh.L)} cm`],
+      ['Yerleşen', n + ' adet'],
+      ['Plaka', `${prints} adet`]);
+  }
   if (layout.artik) {
     let P = 0, Fo = 0; layout.sheets.forEach(s => { const c = s.copies || 1; P += s.W * s.L * c; Fo += s.rollCm * 10 * s.L * c * faces; });
     const p2 = sh ? sh.W * sh.L : 1;
@@ -1421,7 +1477,7 @@ function renderStats() {
       ['Yerleşen', n + ' adet'],
       ['Kalan parça', `${layout.free} / ${layout.plateCount}`]);
   }
-  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' || k === 'Kullanılan foreks' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
 }
@@ -1526,8 +1582,8 @@ function commitRev() {
 function updateRevLbl() {
   const last = lastRev(), lastTxt = last ? ` · Son baskı: <b>${revCode(last)}</b>` : '';
   $('#revLbl').innerHTML = layout && layout.rev && layout.revDone
-    ? `Bu yerleşim <b>${layout.rev}</b> olarak basıldı${lastTxt}`
-    : `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · numara yalnız baskı PDF'i indirilince işlenir; kesim, sunum ve rapor aynı numarayı taşır ama ilerletmez${lastTxt}`;
+    ? `Bu yerleşim <b>${layout.rev}</b> olarak ${layout.fx ? 'kesime verildi' : 'basıldı'}${lastTxt}`
+    : S.fx ? `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · foreks kesimde baskı olmadığı için numara kesim PDF'i indirilince işlenir${lastTxt}` : `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · numara yalnız baskı PDF'i indirilince işlenir; kesim, sunum ve rapor aynı numarayı taşır ama ilerletmez${lastTxt}`;
 }
 
 /* ---------------- PDF çıktıları ---------------- */
@@ -1613,7 +1669,7 @@ function buildCsv() {
   const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim', 'Taban']];
   layout.sheets.forEach((s, si) => s.pl.forEach(p => {
     const [w, h] = rotDims(p.it.geom, p.rot);
-    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
+    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.fx ? `foreks plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
   }));
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
@@ -1653,7 +1709,7 @@ $('#dlBack').onclick = e => withBusy(e.currentTarget, () => downloadPrint('back'
 // Kesim de her zaman sayfa başına ayrı PDF; baskı dosyalarıyla aynı SAYFA numarasını taşır.
 async function downloadCut() {
   const n = layout.sheets.length;
-  if (n === 1) { const b = await buildCutPdf(); await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf'); return; }
+  if (n === 1) { const b = await buildCutPdf(); if (await saveFile(`${fileBase()}_KESIM.pdf`, b, 'application/pdf') && layout.fx) commitRev(); return; }
   let saved = 0;
   for (let i = 0; i < n; i++) {
     const cp = layout.sheets[i].copies || 1;
@@ -1662,7 +1718,7 @@ async function downloadCut() {
     if (!(await saveFile(name, b, 'application/pdf'))) break;
     saved++; if (i < n - 1) await sleep(400);
   }
-  if (saved) toast(`${saved}/${n} kesim sayfası ayrı PDF olarak indirildi`);
+  if (saved) { if (layout.fx) commitRev(); toast(`${saved}/${n} kesim sayfası ayrı PDF olarak indirildi`); }
 }
 $('#dlCut').onclick = e => withBusy(e.currentTarget, downloadCut);
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
@@ -1846,8 +1902,23 @@ function syncDup() {
   $('#dlPrint').textContent = S.duplex ? 'Ön yüz baskı PDF indir ↓' : 'Çizgisiz baskı PDF indir ↓';
   if (!S.duplex && view === 'back') { view = 'print'; $$('#segView button').forEach(x => x.classList.toggle('on', x.dataset.v === 'print')); }
 }
+function syncFx() {
+  $$('#fxSel button').forEach(b => b.classList.toggle('on', (b.dataset.f === '1') === !!S.fx));
+  $('#fxBox').classList.toggle('hidden', !S.fx); $('#dupBox').classList.toggle('hidden', !!S.fx);
+  $('#fxW').value = S.fxW; $('#fxL').value = S.fxL;
+  $('#dlPrint').classList.toggle('hidden', !!S.fx); if (S.fx) $('#dlBack').classList.add('hidden');
+  $('#dlCut').textContent = S.fx ? 'Foreks kesim PDF indir ↓' : 'Kesim PDF indir ↓'; $('#dlCut').classList.toggle('pri', !!S.fx);
+  const vb = $$('#segView button'); vb[0].textContent = S.fx ? 'Görsel' : 'Baskı'; vb[2].textContent = S.fx ? 'Kesim' : 'Kesim + register';
+  $('#ayarlar h2').lastChild.textContent = S.fx ? 'Foreks ve üretim kuralları' : 'Folyo ve üretim kuralları';
+  $('#ayarlar .sub').textContent = S.fx ? 'Baskısız foreks kesim: parçalar plakaya en az plaka harcanacak şekilde dizilir.' : 'Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.';
+  $('#ayarlar .rules').classList.toggle('hidden', !!S.fx);
+  renderArtik(); renderMedia();
+}
+$$('#fxSel button').forEach(b => b.onclick = () => { S.fx = b.dataset.f === '1'; if (S.fx && S.duplex) { S.duplex = false; syncDup(); } syncFx(); if (!S.fx) syncDup(); renderItems(); scheduleNest(100); });
+for (const k of ['fxW', 'fxL']) $('#' + k).onchange = e => { const v = +e.target.value; S[k] = v >= 10 ? v : DEFAULTS[k]; e.target.value = S[k]; renderMedia(); scheduleNest(150); };
+$('#fxStd').onclick = () => { S.fxW = 156; S.fxL = 305; syncFx(); scheduleNest(100); };
 $$('#dupSel button').forEach(b => b.onclick = () => { S.duplex = b.dataset.d === '1'; if (S.duplex) pairBacks(); syncDup(); renderItems(); scheduleNest(100); });
-syncDup();
+syncDup(); syncFx();
 syncG(); bindSettings(); renderMedia(); updateRevLbl();
 window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest, get artik() { return artik }, set artik(v) { artik = v; saveArtik(); renderArtik(); } };
 </script>
