@@ -155,7 +155,8 @@ details .fields{margin-top:10px}
 .jobname .jchk{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .jobname .jchk input{width:auto;flex:none;margin:0}
 .jobname input:disabled{opacity:.5;cursor:not-allowed}
-.jobname input{flex:1 1 260px;min-width:0;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:8px;font:inherit;background:var(--card,#fff);color:inherit}
+.jobname input[type=text]{flex:1 1 260px;min-width:0;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;font:inherit;background:var(--panel2);color:var(--text)}
+.jobname input[type=text]::placeholder{color:var(--dim)}
 .jobname em{flex:1 1 100%;font:500 11px var(--mono);color:var(--muted);font-style:normal}
 .rev b{color:var(--text)}
 .warns{margin-top:10px;display:flex;flex-direction:column;gap:6px}
@@ -1421,7 +1422,7 @@ function revTextPos(sh) {
   const inner = rightFeed ? pair.x + r : S.regEdge + r;           // soldaki noktanın sağ kenarı (mm)
   const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
   if (avail < 3) return null;
-  let txt = revText() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1) txt += ` · ${sh.copies} KOPYA`;
+  let txt = printLabel() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1) txt += ` · ${sh.copies} KOPYA`;
   const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5), 0.55 * S.regDia) * PT / 0.718; // büyük harf yüksekliği ≤ nokta çapının %55'i // yükseklik: kenar ve iş alanına taşmasın
   const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
   while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
@@ -1688,12 +1689,15 @@ function buildCsv() {
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
 // İsteğe bağlı dosya adı: boşsa yalnız REV numarası; doluysa REV-0001_<AD>_... (REV sırası her zaman korunur).
-function jobTag() {
-  const t = String(S.jobName || '').trim().replace(/İ/g, 'I').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[ğĞ]/g, m => m === 'ğ' ? 'g' : 'G').replace(/[şŞ]/g, m => m === 'ş' ? 's' : 'S').replace(/[çÇ]/g, m => m === 'ç' ? 'c' : 'C').replace(/[öÖ]/g, m => m === 'ö' ? 'o' : 'O').replace(/[üÜ]/g, m => m === 'ü' ? 'u' : 'U')
-    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toUpperCase().slice(0, 40);
-  return S.jobNameOn && t ? `_${t}` : '';
+function asciiName(keepSpace) {
+  const map = { 'İ': 'I', 'ı': 'i', 'Ğ': 'G', 'ğ': 'g', 'Ş': 'S', 'ş': 's', 'Ç': 'C', 'ç': 'c', 'Ö': 'O', 'ö': 'o', 'Ü': 'U', 'ü': 'u' };
+  let t = String(S.jobName || '').trim().replace(/[İıĞğŞşÇçÖöÜü]/g, m => map[m]).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  t = t.replace(keepSpace ? /[^A-Za-z0-9 ._\-\/]+/g : /[^A-Za-z0-9]+/g, keepSpace ? ' ' : '-');
+  return (keepSpace ? t.replace(/\s+/g, ' ').trim() : t.replace(/^-+|-+$/g, '')).toUpperCase().slice(0, 40);
 }
+function jobTag() { const t = asciiName(false); return S.jobNameOn && t ? `_${t}` : ''; }
+// Baskıda başlangıç çiftinin arasına basılan yazı: ad kullanılıyorsa yazılan ad, değilse REV numarası.
+function printLabel() { const t = asciiName(true); return S.jobNameOn && t ? t : revText(); }
 function revName() { return `${ensureRev()}${jobTag()}` }
 function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 ? `_${layout.sheets[0].copies}-KOPYA` : ''; return `${layout.rev}${jobTag()}${c}` }
 
@@ -1877,8 +1881,8 @@ function clearAll() { files.length = 0; items.length = 0; layout = null; curShee
 $('#btnClear').onclick = clearAll;
 const drop = $('#drop');
 function updateJobPrev() { const el = $('#jobNamePrev'); if (!el) return; $('#jobName').disabled = !S.jobNameOn; el.textContent = 'Örnek dosya adı: ' + (layout && layout.rev ? layout.rev : nextRevPreview()) + jobTag() + '_BASKI.pdf'; }
-$('#jobName').addEventListener('input', () => { S.jobName = $('#jobName').value; updateJobPrev(); });
-$('#jobNameOn').addEventListener('change', () => { S.jobNameOn = $('#jobNameOn').checked; updateJobPrev(); if (S.jobNameOn) $('#jobName').focus(); });
+$('#jobName').addEventListener('input', () => { S.jobName = $('#jobName').value; updateJobPrev(); if (layout) renderPreview(); });
+$('#jobNameOn').addEventListener('change', () => { S.jobNameOn = $('#jobNameOn').checked; updateJobPrev(); if (layout) renderPreview(); if (S.jobNameOn) $('#jobName').focus(); });
 updateJobPrev();
 $('#fileIn').onchange = e => { addFiles(e.target.files); e.target.value = '' };
 ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over') }));
