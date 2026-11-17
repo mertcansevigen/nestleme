@@ -150,6 +150,13 @@ details .fields{margin-top:10px}
 .dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:6px}
 .dl .btn{justify-content:center}
 .rev{font:600 12px var(--mono);color:var(--muted)}
+.jobname{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0 4px;font-size:13px;font-weight:600}
+.jobname small{font-weight:400;color:var(--muted)}
+.jobname .jchk{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.jobname .jchk input{width:auto;flex:none;margin:0}
+.jobname input:disabled{opacity:.5;cursor:not-allowed}
+.jobname input{flex:1 1 260px;min-width:0;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:8px;font:inherit;background:var(--card,#fff);color:inherit}
+.jobname em{flex:1 1 100%;font:500 11px var(--mono);color:var(--muted);font-style:normal}
 .rev b{color:var(--text)}
 .warns{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .warns div{font-size:12.5px;color:#ffd58a;background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.3);border-radius:8px;padding:7px 10px}
@@ -263,6 +270,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <h2><span class="n">03</span>Dosyalarını indir</h2>
         <p class="sub">Çizgisiz baskı ve ayrı kesim; aynı ölçü ve koordinatlar. Baskı %100 ölçekte yapılır.</p>
         <div class="rev" id="revLbl"></div>
+        <label class="jobname"><span class="jchk"><input type="checkbox" id="jobNameOn" data-k="jobNameOn"> Dosya adı kullan <small>(isteğe bağlı)</small></span><input type="text" id="jobName" disabled data-k="jobName" maxlength="40" placeholder="Boş bırakılırsa yalnız REV numarası kullanılır" autocomplete="off"><em id="jobNamePrev"></em></label>
         <div class="dl">
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
           <button class="btn pri hidden" id="dlBack" disabled>Arka yüz baskı PDF indir ↓</button>
@@ -297,7 +305,7 @@ const DEFAULTS = {
   material: 'folyo-arkasi-gri', roll: 137, pay: 40, maxLen: 300, sideMargin: 10, headMargin: 10,
   cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
-  cutWidth: 0.25, jobName: '', gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false,
+  cutWidth: 0.25, jobName: '', jobNameOn: false, gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false,
   fx: false, fxW: 156, fxL: 305, fxGap: 10, fxEdge: 10 // Foreks kesim (baskısız): plaka cm, parça arası ve kenar payı mm
 };
 const FIXED = { ...DEFAULTS }; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
@@ -1679,7 +1687,15 @@ function buildCsv() {
   }));
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
-function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 ? `_${layout.sheets[0].copies}-KOPYA` : ''; return `${layout.rev}${c}` }
+// İsteğe bağlı dosya adı: boşsa yalnız REV numarası; doluysa REV-0001_<AD>_... (REV sırası her zaman korunur).
+function jobTag() {
+  const t = String(S.jobName || '').trim().replace(/İ/g, 'I').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[ğĞ]/g, m => m === 'ğ' ? 'g' : 'G').replace(/[şŞ]/g, m => m === 'ş' ? 's' : 'S').replace(/[çÇ]/g, m => m === 'ç' ? 'c' : 'C').replace(/[öÖ]/g, m => m === 'ö' ? 'o' : 'O').replace(/[üÜ]/g, m => m === 'ü' ? 'u' : 'U')
+    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toUpperCase().slice(0, 40);
+  return S.jobNameOn && t ? `_${t}` : '';
+}
+function revName() { return `${ensureRev()}${jobTag()}` }
+function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 ? `_${layout.sheets[0].copies}-KOPYA` : ''; return `${layout.rev}${jobTag()}${c}` }
 
 let dlCap; const dlReady = (async () => { for (let i = 0; i < 40 && !(window.claude && window.claude.use); i++) await sleep(50); try { dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null } catch { dlCap = null } })();
 async function saveFile(name, data, type) {
@@ -1703,7 +1719,7 @@ async function downloadPrint(side) {
   let saved = 0;
   for (let i = 0; i < n; i++) {
     const cp = layout.sheets[i].copies || 1;
-    const name = `${ensureRev()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_${tag}BASKI.pdf`;
+    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_${tag}BASKI.pdf`;
     const b = await buildPrintPdf(side, i);
     if (!(await saveFile(name, b, 'application/pdf'))) break;
     saved++; if (i < n - 1) await sleep(400);
@@ -1719,7 +1735,7 @@ async function downloadCut() {
   let saved = 0;
   for (let i = 0; i < n; i++) {
     const cp = layout.sheets[i].copies || 1;
-    const name = `${ensureRev()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_KESIM.pdf`;
+    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_KESIM.pdf`;
     const b = await buildCutPdf(i);
     if (!(await saveFile(name, b, 'application/pdf'))) break;
     saved++; if (i < n - 1) await sleep(400);
@@ -1860,6 +1876,10 @@ $('#btnSamplePdf').onclick = async () => { const b = await samplePdf(); await sa
 function clearAll() { files.length = 0; items.length = 0; layout = null; curSheet = 0; renderItems(); renderAll(); setStatus('PDF bekleniyor'); updateRevLbl(); }
 $('#btnClear').onclick = clearAll;
 const drop = $('#drop');
+function updateJobPrev() { const el = $('#jobNamePrev'); if (!el) return; $('#jobName').disabled = !S.jobNameOn; el.textContent = 'Örnek dosya adı: ' + (layout && layout.rev ? layout.rev : nextRevPreview()) + jobTag() + '_BASKI.pdf'; }
+$('#jobName').addEventListener('input', () => { S.jobName = $('#jobName').value; updateJobPrev(); });
+$('#jobNameOn').addEventListener('change', () => { S.jobNameOn = $('#jobNameOn').checked; updateJobPrev(); if (S.jobNameOn) $('#jobName').focus(); });
+updateJobPrev();
 $('#fileIn').onchange = e => { addFiles(e.target.files); e.target.value = '' };
 ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over') }));
 ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over') }));
@@ -1872,7 +1892,7 @@ function bindSettings() {
     if (el.type === 'checkbox') el.checked = !!S[k]; else el.value = S[k];
     el.onchange = () => {
       S[k] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (+el.value || 0) : el.value;
-      if (k !== 'jobName') scheduleNest();
+      if (k !== 'jobName' && k !== 'jobNameOn') scheduleNest();
     };
   });
 }
