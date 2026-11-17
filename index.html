@@ -271,7 +271,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <h2><span class="n">03</span>Dosyalarını indir</h2>
         <p class="sub">Çizgisiz baskı ve ayrı kesim; aynı ölçü ve koordinatlar. Baskı %100 ölçekte yapılır.</p>
         <div class="rev" id="revLbl"></div>
-        <label class="jobname"><span class="jchk"><input type="checkbox" id="jobNameOn" data-k="jobNameOn"> Dosya adı kullan <small>(isteğe bağlı)</small></span><input type="text" id="jobName" disabled data-k="jobName" maxlength="40" placeholder="Boş bırakılırsa yalnız REV numarası kullanılır" autocomplete="off"><em id="jobNamePrev"></em></label>
+        <label class="jobname"><span class="jchk"><input type="checkbox" id="jobNameOn" data-k="jobNameOn"> Dosya adı kullan <small>(isteğe bağlı)</small></span><input type="text" id="jobName" disabled data-k="jobName" maxlength="80" placeholder="Boş bırakılırsa yalnız REV numarası kullanılır" autocomplete="off"><em id="jobNamePrev"></em></label>
         <div class="dl">
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
           <button class="btn pri hidden" id="dlBack" disabled>Arka yüz baskı PDF indir ↓</button>
@@ -1166,7 +1166,7 @@ async function runArtik(token, t) {
   const placedN = inst.length - r.unplaced.length;
   showBar(-1); setStatus(sheets.length ? `${sheets.reduce((a, x) => a + x.copies, 0)} foreks parça · ${placedN}/${inst.length} adet` : `Hiçbir iş foreks parçalara sığmadı · 0/${inst.length} adet`, sheets.length ? 'ok' : 'err');
   if (!sheets.length) layout.sheets = [];
-  renderAll(); renderMedia(); renderArtik();
+  applyRegPairs(); renderAll(); renderMedia(); renderArtik();
 }
 /* ---------- foreks kesim (baskısız): tam plakaya dizim ---------- */
 function fxUsedL(sh) { return Math.min(sh.L, Math.ceil(sh.usedL + 2 * S.fxEdge - S.fxGap)); } // plaka üstünden son kesime + kenar payı (mm)
@@ -1208,8 +1208,29 @@ function renderArtik() {
   tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { artik.splice(+b.dataset.del, 1); artikStat = new Map(); saveArtik(); renderArtik(); scheduleNest(100); });
   if (focus) { const el = tb.querySelector(`[data-ar="${focus}"]`); if (el) el.focus(); }
 }
-function regMarks(W, L) {
-  const e = S.regEdge, marks = [];
+// Register çifti aralığı yazıya göre dinamik: yazı en az REG_TXT_PT'de sığacak kadar açılır (varsayılan 46,28 mm'den küçülmez).
+const REG_TXT_PT = 8, REG_PAIR_CAP = 130;
+function labelFor(sh) {
+  let t = printLabel() + (S.duplex ? '-Ö' : ''); if ((sh.copies || 1) > 1 && !nameHasCopy()) t += ` · ${sh.copies} KOPYA`; return t;
+}
+function applyRegPairs() {
+  if (!layout || layout.fx || S.regProfile !== 'qcut' || !layout.sheets) return;
+  const e = S.regEdge, pad = 1;
+  for (const sh of layout.sheets) {
+    if (sh.fx) continue;
+    if (sh.baseW == null) { sh.baseW = sh.W; sh.plBase = sh.pl.map(p => p.X); }
+    const maxW = sh.plate ? sh.baseW : layout.md.W;                         // foreks parça: sayfa = parça (genişleyemez)
+    const cap = Math.min(REG_PAIR_CAP, maxW - 2 * e - S.regDia);
+    const need = HB.widthOfTextAtSize(labelFor(sh), REG_TXT_PT) / PT + S.regDia + 2 * pad;
+    const pair = Math.max(S.regPair, Math.min(need, cap));
+    const W = Math.min(maxW, Math.max(sh.baseW, Math.ceil(2 * e + pair + S.regDia)));
+    const dW = W - sh.baseW, top = S.feed[0] === 'T';
+    sh.pl.forEach((p, i) => { p.X = sh.plBase[i] + (top ? dW : 0); });
+    sh.W = W; sh.pair = pair; sh.marks = regMarks(W, sh.L, pair); delete sh._back;
+  }
+}
+function regMarks(W, L, pairMm) {
+  const e = S.regEdge, marks = [], pairD = pairMm || S.regPair;
   const bottomFeed = S.feed[0] === 'B', rightFeed = S.feed[1] === 'R';
   const y0 = e, y1 = L - e; const span = y1 - y0;
   const nSeg = Math.max(1, Math.ceil(span / S.regMaxGap)); const rows = [];
@@ -1217,7 +1238,7 @@ function regMarks(W, L) {
   for (const y of rows) { marks.push({ x: e, y }); marks.push({ x: W - e, y }); }
   if (S.regProfile === 'qcut') {
     const ys = bottomFeed ? y0 : y1;
-    const xs = rightFeed ? W - e - S.regPair : e + S.regPair;
+    const xs = rightFeed ? W - e - pairD : e + pairD;
     marks.push({ x: xs, y: ys, pair: true });
   }
   return marks;
@@ -1295,7 +1316,7 @@ async function runNest() {
   if (curSheet >= sheets.length) curSheet = 0;
   const prints = sheets.reduce((a, x) => a + x.copies, 0);
   showBar(-1); setStatus(`${sheets.length} sayfa${prints > sheets.length ? ` (${prints} baskı)` : ''} · ${inst.length - r.unplaced.length}/${inst.length} adet`, 'ok');
-  renderAll(); renderMedia(); renderArtik();
+  applyRegPairs(); renderAll(); renderMedia(); renderArtik();
 }
 function settingsSig() { return JSON.stringify([S, items.map(i => [i.id, i.qty, i.scale, i.rotate])]) }
 
@@ -1420,9 +1441,9 @@ function revTextPos(sh) {
   const pair = sh.marks.find(m => m.pair); if (!pair) return null;
   const rightFeed = (S.feed[1] === 'R') !== (sh.side === 'back'); const r = S.regDia / 2, pad = 1;
   const inner = rightFeed ? pair.x + r : S.regEdge + r;           // soldaki noktanın sağ kenarı (mm)
-  const avail = S.regPair - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
+  const avail = (sh.pair || S.regPair) - S.regDia - 2 * pad;                    // iki nokta arası kullanılabilir en (mm)
   if (avail < 3) return null;
-  let txt = printLabel() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1) txt += ` · ${sh.copies} KOPYA`;
+  let txt = printLabel() + (S.duplex ? (sh.side === 'back' ? '-A' : '-Ö') : ''); if ((sh.copies || 1) > 1 && !nameHasCopy()) txt += ` · ${sh.copies} KOPYA`;
   const maxPt = Math.min(2 * (pair.y - 0.5), 2 * (layout.md.head - pair.y - 0.5), 0.55 * S.regDia) * PT / 0.718; // büyük harf yüksekliği ≤ nokta çapının %55'i // yükseklik: kenar ve iş alanına taşmasın
   const sizeFor = t => Math.min(maxPt, avail * PT / HB.widthOfTextAtSize(t, 1));
   while (sizeFor(txt) < 6 && txt.length > 9) txt = txt.slice(0, -2) + '…';
@@ -1689,17 +1710,25 @@ function buildCsv() {
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
 // İsteğe bağlı dosya adı: boşsa yalnız REV numarası; doluysa REV-0001_<AD>_... (REV sırası her zaman korunur).
+const NAME_MAX = 80;
 function asciiName(keepSpace) {
   const map = { 'İ': 'I', 'ı': 'i', 'Ğ': 'G', 'ğ': 'g', 'Ş': 'S', 'ş': 's', 'Ç': 'C', 'ç': 'c', 'Ö': 'O', 'ö': 'o', 'Ü': 'U', 'ü': 'u' };
   let t = String(S.jobName || '').trim().replace(/[İıĞğŞşÇçÖöÜü]/g, m => map[m]).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  t = t.replace(keepSpace ? /[^A-Za-z0-9 ._\-\/]+/g : /[^A-Za-z0-9]+/g, keepSpace ? ' ' : '-');
-  return (keepSpace ? t.replace(/\s+/g, ' ').trim() : t.replace(/^-+|-+$/g, '')).toUpperCase().slice(0, 40);
+  t = keepSpace ? t.replace(/[^A-Za-z0-9 ._\-\/·]+/g, ' ').replace(/\s+/g, ' ').trim()
+                : t.replace(/[^A-Za-z0-9_\-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '');
+  return t.toUpperCase().slice(0, NAME_MAX);
 }
-function jobTag() { const t = asciiName(false); return S.jobNameOn && t ? `_${t}` : ''; }
+// Dosya adında BASKI/KESIM soneki dosya türüyle birleşir; ad içindeki tekrarını at.
+function nameCore() { return asciiName(false).replace(/[_-](BASKI|KESIM)$/i, ''); }
+function nameOn() { return !!(S.jobNameOn && asciiName(false)); }
+// Ad "REV-" ile başlıyorsa kullanıcının kendi iş numarasıdır: dosya adı tamamen ona göre iner (REV-0001_ eklenmez).
+function ownRev() { return nameOn() && /^REV-/i.test(nameCore()); }
+function jobTag() { return nameOn() ? `_${nameCore()}` : ''; }
+function nameHasCopy() { return nameOn() && /KOPYA/i.test(asciiName(true)); }
 // Baskıda başlangıç çiftinin arasına basılan yazı: ad kullanılıyorsa yazılan ad, değilse REV numarası.
-function printLabel() { const t = asciiName(true); return S.jobNameOn && t ? t : revText(); }
-function revName() { return `${ensureRev()}${jobTag()}` }
-function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 ? `_${layout.sheets[0].copies}-KOPYA` : ''; return `${layout.rev}${jobTag()}${c}` }
+function printLabel() { return nameOn() ? asciiName(true) : revText(); }
+function revName() { return ownRev() ? nameCore() : `${ensureRev()}${jobTag()}` }
+function fileBase() { const c = layout.sheets.length === 1 && layout.sheets[0].copies > 1 && !nameHasCopy() ? `_${layout.sheets[0].copies}-KOPYA` : ''; return ownRev() ? `${nameCore()}${c}` : `${layout.rev}${jobTag()}${c}` }
 
 let dlCap; const dlReady = (async () => { for (let i = 0; i < 40 && !(window.claude && window.claude.use); i++) await sleep(50); try { dlCap = window.claude && window.claude.use ? await window.claude.use('downloads') : null } catch { dlCap = null } })();
 async function saveFile(name, data, type) {
@@ -1723,7 +1752,7 @@ async function downloadPrint(side) {
   let saved = 0;
   for (let i = 0; i < n; i++) {
     const cp = layout.sheets[i].copies || 1;
-    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_${tag}BASKI.pdf`;
+    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 && !nameHasCopy() ? `_${cp}-KOPYA` : ''}_${tag}BASKI.pdf`;
     const b = await buildPrintPdf(side, i);
     if (!(await saveFile(name, b, 'application/pdf'))) break;
     saved++; if (i < n - 1) await sleep(400);
@@ -1739,7 +1768,7 @@ async function downloadCut() {
   let saved = 0;
   for (let i = 0; i < n; i++) {
     const cp = layout.sheets[i].copies || 1;
-    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 ? `_${cp}-KOPYA` : ''}_KESIM.pdf`;
+    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 && !nameHasCopy() ? `_${cp}-KOPYA` : ''}_KESIM.pdf`;
     const b = await buildCutPdf(i);
     if (!(await saveFile(name, b, 'application/pdf'))) break;
     saved++; if (i < n - 1) await sleep(400);
@@ -1881,8 +1910,8 @@ function clearAll() { files.length = 0; items.length = 0; layout = null; curShee
 $('#btnClear').onclick = clearAll;
 const drop = $('#drop');
 function updateJobPrev() { const el = $('#jobNamePrev'); if (!el) return; $('#jobName').disabled = !S.jobNameOn; el.textContent = 'Örnek dosya adı: ' + (layout && layout.rev ? layout.rev : nextRevPreview()) + jobTag() + '_BASKI.pdf'; }
-$('#jobName').addEventListener('input', () => { S.jobName = $('#jobName').value; updateJobPrev(); if (layout) renderPreview(); });
-$('#jobNameOn').addEventListener('change', () => { S.jobNameOn = $('#jobNameOn').checked; updateJobPrev(); if (layout) renderPreview(); if (S.jobNameOn) $('#jobName').focus(); });
+$('#jobName').addEventListener('input', () => { S.jobName = $('#jobName').value; updateJobPrev(); if (layout) { applyRegPairs(); renderAll(); } });
+$('#jobNameOn').addEventListener('change', () => { S.jobNameOn = $('#jobNameOn').checked; updateJobPrev(); if (layout) { applyRegPairs(); renderAll(); } if (S.jobNameOn) $('#jobName').focus(); });
 updateJobPrev();
 $('#fileIn').onchange = e => { addFiles(e.target.files); e.target.value = '' };
 ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over') }));
