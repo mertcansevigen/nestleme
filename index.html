@@ -72,6 +72,9 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .item .brow{grid-column:2/-1;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
 .item .brow select{flex:1;min-width:0;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-size:12px}
 .gscale .rt button{white-space:nowrap}
+#dosyalar .gscale:has(#fxSel){flex-wrap:wrap}
+#dosyalar .gscale:has(#fxSel)>div:first-child{flex:1 1 150px;min-width:0}
+#fxSel{flex-wrap:wrap;max-width:100%}
 #aluOpts .gscale{flex-wrap:wrap;margin:6px 0}
 #aluOpts .gscale>div:first-child{flex:1 1 130px;min-width:0}
 #aluOpts .rt{flex-wrap:wrap;max-width:100%;flex:0 1 auto}
@@ -212,7 +215,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
-        <div class="gscale"><div><b>Üretim türü</b><small>Foreks ve alüminyum kesim baskısızdır; plakadan kesilir</small></div><div class="rt" id="fxSel"><button data-f="0">Folyo baskı</button><button data-f="1">Foreks kesim</button><button data-f="2">Alüminyum kesim</button></div></div>
+        <div class="gscale"><div><b>Üretim türü</b><small>Foreks ve alüminyum baskısız kesimdir; plakadan kesilir</small></div><div class="rt" id="fxSel"><button data-f="0">Folyo baskı</button><button data-f="1">Foreks</button><button data-f="2">Alüminyum</button></div></div>
         <div class="gscale dup" id="dupBox"><div><b>Çift Yüz · foreks</b><small>Ön + arka yüz folyosu; arka yerleşim aynalı, plaka tek kesim</small></div><div class="rt" id="dupSel"><button data-d="0">Kapalı</button><button data-d="1">Çift Yüz</button></div></div>
         <div class="gscale"><div><b>Tüm dosyaların ölçeği</b><small>1:10 seçilirse yüklenen her şey 10 kat büyütülür</small></div><div class="rt" id="gRatio"><button data-g="1">1:1</button><button data-g="10">1:10</button></div></div>
         <label class="drop" id="drop">
