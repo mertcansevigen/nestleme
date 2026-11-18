@@ -72,6 +72,10 @@ h1{font-size:34px;line-height:1.05;margin:0 0 6px;letter-spacing:-.8px}
 .item .brow{grid-column:2/-1;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
 .item .brow select{flex:1;min-width:0;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-size:12px}
 .gscale .rt button{white-space:nowrap}
+#aluOpts .gscale{flex-wrap:wrap;margin:6px 0}
+#aluOpts .gscale>div:first-child{flex:1 1 130px;min-width:0}
+#aluOpts .rt{flex-wrap:wrap;max-width:100%;flex:0 1 auto}
+#aluOpts .gscale .rt button{padding:7px 10px}
 .rt{display:flex;background:#121315;border:1px solid var(--line2);border-radius:8px;padding:2px;gap:2px}
 .rt button{border:none;background:none;color:var(--muted);font:600 12px var(--mono);padding:6px 9px;border-radius:6px;cursor:pointer}
 .rt button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
@@ -208,7 +212,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
     <div>
       <section class="card" id="dosyalar">
         <h2><span class="n">01</span>Dosyalar ve adetler</h2>
-        <div class="gscale"><div><b>Üretim türü</b><small>Foreks kesim baskısızdır; plakadan kesilir</small></div><div class="rt" id="fxSel"><button data-f="0">Folyo baskı</button><button data-f="1">Foreks kesim</button></div></div>
+        <div class="gscale"><div><b>Üretim türü</b><small>Foreks ve alüminyum kesim baskısızdır; plakadan kesilir</small></div><div class="rt" id="fxSel"><button data-f="0">Folyo baskı</button><button data-f="1">Foreks kesim</button><button data-f="2">Alüminyum kesim</button></div></div>
         <div class="gscale dup" id="dupBox"><div><b>Çift Yüz · foreks</b><small>Ön + arka yüz folyosu; arka yerleşim aynalı, plaka tek kesim</small></div><div class="rt" id="dupSel"><button data-d="0">Kapalı</button><button data-d="1">Çift Yüz</button></div></div>
         <div class="gscale"><div><b>Tüm dosyaların ölçeği</b><small>1:10 seçilirse yüklenen her şey 10 kat büyütülür</small></div><div class="rt" id="gRatio"><button data-g="1">1:1</button><button data-g="10">1:10</button></div></div>
         <label class="drop" id="drop">
@@ -226,9 +230,15 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
         <h2><span class="n">02</span>Folyo ve üretim kuralları</h2>
         <p class="sub">Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.</p>
         <div class="artik hidden" id="fxBox">
-          <b style="font-size:13px">Foreks plaka</b> <span style="color:var(--dim);font-size:12px">· baskısız kesim</span>
+          <b style="font-size:13px" id="fxTitle">Foreks plaka</b> <span style="color:var(--dim);font-size:12px">· baskısız kesim</span>
           <table style="margin-top:8px"><thead><tr><th>En (cm)</th><th>Boy (cm)</th><th></th></tr></thead><tbody><tr><td><input type="number" min="10" step="0.1" id="fxW"></td><td><input type="number" min="10" step="0.1" id="fxL"></td><td><button class="btn sm ghost" id="fxStd">156 × 305</button></td></tr></tbody></table>
-          <small>Standart plaka 156 × 305 cm; farklı plaka için ölçüyü değiştir. Parçalar arası 10 mm, plaka kenarından 10 mm pay (kesim çizgisinden ölçülür). Gereken plaka adedi ve m² otomatik hesaplanır. Register ve baskı yoktur.</small>
+          <div class="hidden" id="aluOpts" style="margin-top:10px">
+            <div class="gscale" style="padding:6px 0"><div><b>Plaka ölçüsü</b><small>cm</small></div><div class="rt" id="aluPlates"></div></div>
+            <div class="gscale" style="padding:6px 0"><div><b>Kalınlık</b><small>mm</small></div><div class="rt" id="aluThk"><button data-t="1">1 mm</button><button data-t="1.5">1,5 mm</button><button data-t="2">2 mm</button></div></div>
+            <div class="gscale" style="padding:6px 0"><div><b>Kesim yöntemi</b><small>parçalar arası en az boşluğu belirler</small></div><div class="rt" id="aluMethod"><button data-m="cnc">CNC</button><button data-m="qcut">Q-CUT</button><button data-m="lazer">Lazer</button></div></div>
+            <div class="gscale" style="padding:6px 0"><div><b>Kesimler arası boşluk</b><small id="aluGapNote"></small></div><div style="display:flex;align-items:center;gap:6px"><input type="number" step="0.5" id="aluGap" style="width:80px"> <span style="color:var(--dim);font-size:12px">mm</span></div></div>
+          </div>
+          <small id="fxNote">Standart plaka 156 × 305 cm; farklı plaka için ölçüyü değiştir. Parçalar arası 10 mm, plaka kenarından 10 mm pay (kesim çizgisinden ölçülür). Gereken plaka adedi ve m² otomatik hesaplanır. Register ve baskı yoktur.</small>
         </div>
         <div class="artik" id="artikBox">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b style="font-size:13px">Foreks parça</b> <span style="color:var(--dim);font-size:12px">· isteğe bağlı</span></div><button class="btn sm ghost" id="artikAdd">+ Parça ekle</button></div>
@@ -307,6 +317,7 @@ const DEFAULTS = {
   cutMode: 'shape', bleed: 3, cutSource: 'cut', hideLines: true, gapMode: 'auto', gapUnverified: 4, gapManual: 0,
   regOn: true, regProfile: 'qcut', regDia: 6, regEdge: 5, regClear: 1, regMaxGap: 800, regPair: 46.28, feed: 'BR',
   cutWidth: 0.25, jobName: '', jobNameOn: false, gRatio: 1, panelOn: true, overlap: 0, substrate: 'none', duplex: false,
+  alu: false, aluThk: 1, aluMethod: 'cnc', aluGap: 20,
   fx: false, fxW: 156, fxL: 305, fxGap: 10, fxEdge: 10 // Foreks kesim (baskısız): plaka cm, parça arası ve kenar payı mm
 };
 const FIXED = { ...DEFAULTS }; delete FIXED.gRatio; delete FIXED.substrate; delete FIXED.duplex;
@@ -865,7 +876,7 @@ function renderMedia() {
     const c = cmp.find(x => x.w === w);
     return `<tr class="${sel === w ? 'sel' : ''}"><td>${w} cm</td><td>${f(w * 10 - S.pay)} cm</td><td>${c ? (c.ok ? nf(c.len / 1000) + ' m' : 'sığmıyor') : '–'}</td><td>${c && c.ok ? nf(c.m2) + ' m²' : '–'}</td><td>${sel === w ? '✓ seçildi' : ''}</td></tr>`;
   }).join('') + `</table>`;
-  if (S.fx) { const m = fxMd(); $('#prodSum').innerHTML = `Taban <b>foreks plaka ${fmtCm(m.W)} × ${fmtCm(m.L)} cm</b> · baskısız kesim${layout && layout.fx ? ` · gereken <b>${layout.sheets.reduce((a, x) => a + x.copies, 0)} plaka</b>` : ''}<br>Foreks m² = plaka eni × kullanılan boy · parçalar arası ${fmtCm(S.fxGap)} cm · plaka kenar payı ${fmtCm(S.fxEdge)} cm · register yok`; return; }
+  if (S.fx) { const m = fxMd(); $('#prodSum').innerHTML = `Taban <b>${matN()} plaka ${fmtCm(m.W)} × ${fmtCm(m.L)} cm${S.alu ? ` · ${aluInfo()}` : ''}</b> · baskısız kesim${layout && layout.fx ? ` · gereken <b>${layout.sheets.reduce((a, x) => a + x.copies, 0)} plaka</b>` : ''}<br>${matT()} m² = plaka eni × kullanılan boy · parçalar arası ${fmtCm(S.fxGap)} cm · plaka kenar payı ${fmtCm(S.fxEdge)} cm · register yok`; return; }
   if (layout && layout.artik) {
     $('#prodSum').innerHTML = layout && layout.artik ? `Taban <b>foreks parça</b> · kullanılan <b>${layout.sheets.reduce((a, s) => a + s.copies, 0)}</b> / ${layout.plateCount} parça · kalan ${layout.free} parça<br>Her parçada kenar payı ${f(layout.md.side)} cm + register · folyo rulosu parça enine göre otomatik (${[...new Set(layout.sheets.map(s => s.rollCm))].join(' / ') || '–'} cm)` : 'Taban <b>foreks parça</b> · parça ölçülerini gir.';
     return;
@@ -1194,7 +1205,7 @@ async function runFx(token, t) {
   layout = { sheets, warns: [...new Set(warns)], res: r.res, md, fx: true, cmp: [], ms: performance.now() - t, rev: null, sig: settingsSig() };
   if (curSheet >= sheets.length) curSheet = 0;
   const plates = sheets.reduce((a, x) => a + x.copies, 0);
-  showBar(-1); setStatus(`${plates} foreks plaka · ${inst.length - r.unplaced.length}/${inst.length} adet`, sheets.length ? 'ok' : 'err');
+  showBar(-1); setStatus(`${plates} ${matN()} plaka · ${inst.length - r.unplaced.length}/${inst.length} adet`, sheets.length ? 'ok' : 'err');
   renderAll(); renderMedia(); renderArtik();
 }
 function renderArtik() {
@@ -1494,14 +1505,15 @@ function renderStats() {
     let P = 0; layout.sheets.forEach(s => P += s.W * fxUsedL(s) * (s.copies || 1));
     const u = fxUsedL(sh), p2 = sh.W * u, rest = sh.L - u;
     st.splice(0, st.length,
-      ['Kullanılan foreks', prints === 1 ? `${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${m2(P)}` : `${prints} plakada toplam ${m2(P)}`],
-      ['Foreks doluluğu', pc(A / P)],
+      [`Kullanılan ${matN()}`, prints === 1 ? `${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${m2(P)}` : `${prints} plakada toplam ${m2(P)}`],
+      [`${matT()} doluluğu`, pc(A / P)],
       ['Net iş alanı', m2(A)],
       ['Fire', m2(P - A)],
       ['Bu plakada kullanılan', `${fmtCm(sh.W)} × ${fmtCm(u)} cm = ${m2(p2)}${sh.copies > 1 ? ` × ${sh.copies}` : ''}`],
       ['Bu plakadan kalan', rest >= 1 ? `${fmtCm(sh.W)} × ${fmtCm(rest)} cm = ${m2(sh.W * rest)}` : 'yok'],
       ['Yerleşen', n + ' adet'],
       ['Plaka', `${prints} adet · ${fmtCm(sh.W)} × ${fmtCm(sh.L)} cm`]);
+    if (S.alu) st.push(['Malzeme', `Alüminyum · ${aluInfo()}`], ['Kesimler arası', `${fmtCm(S.fxGap)} cm (en az ${ALU_MIN[S.aluMethod]} mm)`]);
   }
   if (layout.artik) {
     let P = 0, Fo = 0; layout.sheets.forEach(s => { const c = s.copies || 1; P += s.W * s.L * c; Fo += s.rollCm * 10 * s.L * c * faces; });
@@ -1516,7 +1528,7 @@ function renderStats() {
       ['Yerleşen', n + ' adet'],
       ['Kalan parça', `${layout.free} / ${layout.plateCount}`]);
   }
-  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (k === 'Kullanılan folyo' || k === 'Kullanılan foreks parça' || k === 'Kullanılan foreks' || k === 'Bu plakada kullanılan' || k === 'Bu plakadan kalan' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
+  for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (/^Kullanılan (folyo|foreks|alüminyum)/.test(k) || k === 'Bu plakada kullanılan' || k === 'Bu plakadan kalan' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
   for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
   if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
 }
@@ -1622,7 +1634,7 @@ function updateRevLbl() {
   const last = lastRev(), lastTxt = last ? ` · Son baskı: <b>${revCode(last)}</b>` : '';
   $('#revLbl').innerHTML = layout && layout.rev && layout.revDone
     ? `Bu yerleşim <b>${layout.rev}</b> olarak ${layout.fx ? 'kesime verildi' : 'basıldı'}${lastTxt}`
-    : S.fx ? `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · foreks kesimde baskı olmadığı için numara kesim PDF'i indirilince işlenir${lastTxt}` : `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · numara yalnız baskı PDF'i indirilince işlenir; kesim, sunum ve rapor aynı numarayı taşır ama ilerletmez${lastTxt}`;
+    : S.fx ? `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · ${matN()} kesimde baskı olmadığı için numara kesim PDF'i indirilince işlenir${lastTxt}` : `Bu yerleşimin numarası: <b>${layout && layout.rev ? layout.rev : nextRevPreview()}</b> · numara yalnız baskı PDF'i indirilince işlenir; kesim, sunum ve rapor aynı numarayı taşır ama ilerletmez${lastTxt}`;
 }
 
 /* ---------------- PDF çıktıları ---------------- */
@@ -1708,7 +1720,7 @@ function buildCsv() {
   const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim', 'Taban']];
   layout.sheets.forEach((s, si) => s.pl.forEach(p => {
     const [w, h] = rotDims(p.it.geom, p.rot);
-    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.fx ? `foreks plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
+    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.fx ? (S.alu ? `aluminyum plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm ${fmtThk(S.aluThk)} mm ${ALU_NAME[S.aluMethod]}` : `foreks plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm`) : s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
   }));
   return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
@@ -1964,20 +1976,45 @@ function syncDup() {
   $('#dlPrint').textContent = S.duplex ? 'Ön yüz baskı PDF indir ↓' : 'Çizgisiz baskı PDF indir ↓';
   if (!S.duplex && view === 'back') { view = 'print'; $$('#segView button').forEach(x => x.classList.toggle('on', x.dataset.v === 'print')); }
 }
+const ALU_PLATES = [[125, 250], [150, 300], [200, 400], [100, 200]];
+const ALU_MIN = { cnc: 20, qcut: 20, lazer: 8 }, ALU_NAME = { cnc: 'CNC', qcut: 'Q-CUT', lazer: 'Lazer' };
+const matN = () => S.alu ? 'alüminyum' : 'foreks', matT = () => S.alu ? 'Alüminyum' : 'Foreks';
+const fmtThk = t => String(t).replace('.', ',');
+// alüminyumda parçalar arası boşluk, kesim yönteminin en az değerinden küçük olamaz; foreks sabit 10 mm
+function syncAluGap() {
+  if (S.alu) { const m = ALU_MIN[S.aluMethod] || 20; S.aluGap = Math.max(m, +S.aluGap || m); S.fxGap = S.aluGap; } else S.fxGap = DEFAULTS.fxGap;
+}
+function aluInfo() { return `${fmtThk(S.aluThk)} mm · ${ALU_NAME[S.aluMethod]}`; }
 function syncFx() {
-  $$('#fxSel button').forEach(b => b.classList.toggle('on', (b.dataset.f === '1') === !!S.fx));
+  syncAluGap();
+  $('#aluOpts').classList.toggle('hidden', !(S.fx && S.alu));
+  $('#fxStd').classList.toggle('hidden', !!S.alu);
+  $('#fxTitle').textContent = `${matT()} plaka`;
+  if (S.alu) {
+    const pb = $('#aluPlates'); if (!pb.children.length) ALU_PLATES.forEach(([w, l]) => { const b = document.createElement('button'); b.dataset.w = w; b.dataset.l = l; b.textContent = `${w} × ${l}`; b.onclick = () => { S.fxW = w; S.fxL = l; syncFx(); scheduleNest(100); }; pb.appendChild(b); });
+    $$('#aluPlates button').forEach(b => b.classList.toggle('on', +b.dataset.w === +S.fxW && +b.dataset.l === +S.fxL));
+    $$('#aluThk button').forEach(b => b.classList.toggle('on', +b.dataset.t === +S.aluThk));
+    $$('#aluMethod button').forEach(b => b.classList.toggle('on', b.dataset.m === S.aluMethod));
+    $('#aluGap').min = ALU_MIN[S.aluMethod]; $('#aluGap').value = S.aluGap;
+    $('#aluGapNote').textContent = `${ALU_NAME[S.aluMethod]} için en az ${ALU_MIN[S.aluMethod]} mm; kenar payı ${S.fxEdge} mm`;
+    $('#fxNote').textContent = 'Plaka ölçüsünü listeden seç veya En/Boy alanlarına yaz. Kenar payı foreks ve folyo ile aynıdır (kesim çizgisinden ölçülür); kesimler arası boşluk yönteme göre en az değerin altına inmez. Register ve baskı yoktur.';
+  } else $('#fxNote').textContent = 'Standart plaka 156 × 305 cm; farklı plaka için ölçüyü değiştir. Parçalar arası 10 mm, plaka kenarından 10 mm pay (kesim çizgisinden ölçülür). Gereken plaka adedi ve m² otomatik hesaplanır. Register ve baskı yoktur.';
+  $$('#fxSel button').forEach(b => b.classList.toggle('on', b.dataset.f === (S.fx ? (S.alu ? '2' : '1') : '0')));
   $('#fxBox').classList.toggle('hidden', !S.fx); $('#dupBox').classList.toggle('hidden', !!S.fx);
   $('#fxW').value = S.fxW; $('#fxL').value = S.fxL;
   $('#dlPrint').classList.toggle('hidden', !!S.fx); if (S.fx) $('#dlBack').classList.add('hidden');
-  $('#dlCut').textContent = S.fx ? 'Foreks kesim PDF indir ↓' : 'Kesim PDF indir ↓'; $('#dlCut').classList.toggle('pri', !!S.fx);
+  $('#dlCut').textContent = S.fx ? `${matT()} kesim PDF indir ↓` : 'Kesim PDF indir ↓'; $('#dlCut').classList.toggle('pri', !!S.fx);
   const vb = $$('#segView button'); vb[0].textContent = S.fx ? 'Görsel' : 'Baskı'; vb[2].textContent = S.fx ? 'Kesim' : 'Kesim + register';
-  $('#ayarlar h2').lastChild.textContent = S.fx ? 'Foreks ve üretim kuralları' : 'Folyo ve üretim kuralları';
-  $('#ayarlar .sub').textContent = S.fx ? 'Baskısız foreks kesim: parçalar plakaya en az plaka harcanacak şekilde dizilir.' : 'Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.';
+  $('#ayarlar h2').lastChild.textContent = S.fx ? `${matT()} ve üretim kuralları` : 'Folyo ve üretim kuralları';
+  $('#ayarlar .sub').textContent = S.fx ? `Baskısız ${matN()} kesim: parçalar plakaya en az plaka harcanacak şekilde dizilir.` : 'Her iş folyoya basılır. Rulo eni otomatik seçilir; kurallar atölye standardıdır, ayar gerektirmez.';
   $('#ayarlar .rules').classList.toggle('hidden', !!S.fx);
   renderArtik(); renderMedia();
 }
-$$('#fxSel button').forEach(b => b.onclick = () => { S.fx = b.dataset.f === '1'; if (S.fx && S.duplex) { S.duplex = false; syncDup(); } syncFx(); if (!S.fx) syncDup(); renderItems(); scheduleNest(100); });
-for (const k of ['fxW', 'fxL']) $('#' + k).onchange = e => { const v = +e.target.value; S[k] = v >= 10 ? v : DEFAULTS[k]; e.target.value = S[k]; renderMedia(); scheduleNest(150); };
+$$('#fxSel button').forEach(b => b.onclick = () => { const was = S.alu, f = b.dataset.f; S.fx = f !== '0'; S.alu = f === '2'; if (S.fx && S.alu !== was) { [S.fxW, S.fxL] = S.alu ? ALU_PLATES[0] : [156, 305]; } if (S.fx && S.duplex) { S.duplex = false; syncDup(); } syncFx(); if (!S.fx) syncDup(); renderItems(); scheduleNest(100); });
+$$('#aluThk button').forEach(b => b.onclick = () => { S.aluThk = +b.dataset.t; syncFx(); renderMedia(); renderStats(); });
+$$('#aluMethod button').forEach(b => b.onclick = () => { const was = ALU_MIN[S.aluMethod]; S.aluMethod = b.dataset.m; if (S.aluGap <= was) S.aluGap = ALU_MIN[S.aluMethod]; syncFx(); scheduleNest(100); });
+$('#aluGap').onchange = e => { S.aluGap = Math.max(ALU_MIN[S.aluMethod], +e.target.value || 0); syncFx(); scheduleNest(100); };
+for (const k of ['fxW', 'fxL']) $('#' + k).onchange = e => { const v = +e.target.value; S[k] = v >= 10 ? v : DEFAULTS[k]; e.target.value = S[k]; syncFx(); renderMedia(); scheduleNest(150); };
 $('#fxStd').onclick = () => { S.fxW = 156; S.fxL = 305; syncFx(); scheduleNest(100); };
 $$('#dupSel button').forEach(b => b.onclick = () => { S.duplex = b.dataset.d === '1'; if (S.duplex) pairBacks(); syncDup(); renderItems(); scheduleNest(100); });
 syncDup(); syncFx();
