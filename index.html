@@ -888,8 +888,10 @@ function renderMedia() {
   const md = layout ? layout.md : mediaDims();
   $('#prodSum').innerHTML = `${layout ? 'Seçilen rulo' : 'Varsayılan rulo'} <b>${md.rollCm} cm</b> → baskı eni <b>${f(md.W)} cm</b> (4 cm makine payı) · yerleşim eni <b>${f(md.usableW)} cm</b><br>Kenar payı ${f(md.side)} cm · sayfa boyu en fazla <b>${f(md.L)} cm</b>${layout ? ' · en az folyo harcayan en seçildi' : ''}`;
 }
-function sortInst(inst, mode) {
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function sortInst(inst, mode, seed) {
   const a = inst.slice();
+  if (mode === 'rand') { const R = rng(seed || 1), noise = new Map(); const nz = i => { let v = noise.get(i); if (v === undefined) { v = R(); noise.set(i, v); } return v; }; const k = i => i.it.geom.areaMm * (0.55 + 0.9 * nz(i)); a.sort((x, y) => k(y) - k(x) || x.idx - y.idx); return a; }
   const key = mode === 'long' ? i => Math.max(i.it.geom.wMm, i.it.geom.hMm) : mode === 'short' ? i => Math.min(i.it.geom.wMm, i.it.geom.hMm) * 1e4 + i.it.geom.areaMm / 1e4 : mode === 'perim' ? i => i.it.geom.wMm + i.it.geom.hMm : i => i.it.geom.areaMm;
   if (mode !== 'order') a.sort((x, y) => key(y) - key(x) || x.idx - y.idx);
   return a;
@@ -958,8 +960,9 @@ function splitParts(subs) {
   return parts.map(q => q.subs);
 }
 const splitCache = new WeakMap();
+let ASIS = false; // true: sayfa parçalara ayrılmadan (olduğu gibi) yerleştirilir
 function workItems() {
-  if (!(S.fx && S.splitParts)) return items;
+  if (ASIS || !(S.fx && S.splitParts)) return items;
   const out = [];
   for (const it of items) {
     let parts = splitCache.get(it.an);
@@ -1236,17 +1239,33 @@ function fxMd() {
   return { W, L, side: m, head: m, usableW: W - 2 * m, maxUsableL: L - 2 * m, rollCm: 0, fx: true };
 }
 async function runFx(token, t) {
-  const md = fxMd(); let best = null, fixedRes = null, step = 0; const tries = [['area', 'top'], ['long', 'top'], ['perim', 'mix'], ['area', 'center']];
-  for (const [sort, h] of tries) {
-    const warns = []; const inst = buildInstances(warns, md);
-    const rr = await nestShapes(sortInst(inst, sort), md, token, x => showBar((step + x) / tries.length), SCORES[h], fixedRes); step++;
-    if (!rr) return;
-    fixedRes = fixedRes || rr.res; rr.warns = warns; rr.inst = inst;
-    const last = rr.sheets.length ? rr.sheets[rr.sheets.length - 1].usedL : 0;
-    rr.cost = rr.unplaced.length * 1e9 + rr.sheets.length * 1e5 + last; // önce en az plaka, sonra son plakada en kısa kullanım
-    if (!best || rr.cost < best.cost - 1e-6) best = rr;
-  }
+  const md = fxMd(); let best = null, fixedRes = null, step = 0; const base = [['area', 'top'], ['long', 'top'], ['perim', 'mix'], ['area', 'center']];
+  const hasSplit = S.splitParts && workItems().length !== new Set(items).size;
+  const variants = hasSplit ? [false, true] : [false]; // true: sayfalar parçalara ayrılmadan (olduğu gibi)
+  const BUDGET = 6000, MAXRAND = 12; let nRand = 0, tAll = performance.now(), done = 0;
+  const total = () => variants.length * (base.length + MAXRAND);
+  try {
+    for (const asis of variants) {
+      ASIS = asis; fixedRes = null;
+      const tries = base.map(([sort, h]) => ({ sort, h, seed: 0 }));
+      for (let k = 0; k < tries.length || (k < base.length + MAXRAND && performance.now() - tAll < BUDGET * (asis ? 1 : 0.8)); k++) {
+        if (k >= tries.length) { const rr0 = k - base.length + 1; tries.push({ sort: 'rand', h: rr0 % 3 === 0 ? 'mix' : 'top', seed: 1000 + rr0 * 7919 }); }
+        const { sort, h, seed } = tries[k];
+        if (k >= base.length && best && best.unplaced.length === 0 && best.sheets.length <= 1) break;
+        const warns = []; const inst = buildInstances(warns, md);
+        const rr = await nestShapes(sortInst(inst, sort, seed), md, token, x => showBar((done + x) / total()), SCORES[h], fixedRes); done++;
+        if (!rr) return;
+        fixedRes = fixedRes || rr.res; rr.warns = warns; rr.inst = inst; rr.asis = asis;
+        const last = rr.sheets.length ? rr.sheets[rr.sheets.length - 1].usedL : 0;
+        rr.cost = rr.unplaced.length * 1e9 + rr.sheets.length * 1e5 + last; // önce en az plaka, sonra son plakada en kısa kullanım
+        if (sort === 'rand') nRand++;
+        if (!best || rr.cost < best.cost - 1e-6) best = rr;
+      }
+      if (asis) done = variants.length * (base.length + MAXRAND);
+    }
+  } finally { ASIS = false; }
   const r = best, warns = r.warns, inst = r.inst;
+  if (hasSplit) warns.unshift(r.asis ? 'Sayfalar parçalara ayrılmadan, olduğu gibi yerleştirildi (ayrı parça dizimi daha çok plaka gerektirdi).' : 'Sayfalardaki parçalar ayrı ayrı yeniden dizildi (bu yöntem daha az plaka gerektirdi).');
   const sheets = r.sheets.map(s => ({ W: md.W, L: md.L, usedL: s.usedL, marks: [], copies: 1, fx: true,
     pl: s.pl.map(p => ({ ...p, X: md.side + p.x, Y: md.L - md.head - p.y - rotDims(p.it.geom, p.rot)[1] })) }));
   const sig = sh => sh.pl.map(p => [p.it.id, p.it.panel ? p.it.panel.k : 0, p.rot, Math.round(p.X * 10), Math.round(p.Y * 10)].join(':')).sort().join('|');
