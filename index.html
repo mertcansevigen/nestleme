@@ -257,7 +257,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <li><b>Kesim:</b> yalnız CUT spot rengi (CMYK 0/100/100/0). CUT yoksa sayfa kenarından dikdörtgen kesilir.</li>
           <li><b>Baskı:</b> CUT ve BLEED çizgileri her zaman gizlenir (çizgisiz baskı).</li>
           <li><b>Yerleşim:</b> bleed'den bleed'e; şekiller serbest açıyla döndürülür, kesimler birbirini kesmez. Bleed'i doğrulanmayan dosyaya 4 mm boşluk verilir.</li>
-          <li><b>Sıralama:</b> en az fire veren dizilim otomatik seçilir. Folyo enini aşan işler bindirmesiz panellere bölünür.</li>
+          <li><b>Sıralama:</b> en az fire veren dizilim otomatik seçilir. Folyo enini aşan işler bindirmesiz bölünür; kontur uygunsa gerçek kesim çizgisinden, değilse eşit panele.</li>
           <li><b>Register:</b> her zaman eklenir — Qcut Platinum, çift başlangıç alt sağda.</li>
           <li><b>Foreks parça (isteğe bağlı):</b> parça eklenmezse standart sistem çalışır. Eklenirse baskıya uygun parçalar kullanılır (en ≤ 148 cm, boy ≤ 300 cm); her kenarda 1 cm pay + register, en verimli dolum seçilir. Sığmayan iş uyarı olarak gösterilir.</li>
           <li><b>Çift Yüz (foreks):</b> ön yerleşim folyo baskı alanına yapılır; arka folyo aynı alanın yatay aynası (görsel düz okunur), plaka ön yüzden tek kesim. Folyo 2 yüz hesaplanır.</li>
@@ -290,6 +290,7 @@ footer{color:var(--dim);font-size:12px;text-align:center;padding:24px 0 40px}
           <button class="btn pri" id="dlPrint" disabled>Çizgisiz baskı PDF indir ↓</button>
           <button class="btn pri hidden" id="dlBack" disabled>Arka yüz baskı PDF indir ↓</button>
           <button class="btn" id="dlCut" disabled>Kesim PDF indir ↓</button>
+          <button class="btn" id="dlDxf" disabled>Kesim DXF indir ↓</button>
           <button class="btn" id="dlCsv" disabled>Yerleşim raporu (CSV) ↓</button>
           <button class="btn" id="dlDeck" disabled>Sunum indir (görsel onay) ↓</button>
         </div>
@@ -916,10 +917,15 @@ function backDrawItem(fit) {
   const base = fit.panel ? Object.getPrototypeOf(fit) : fit;
   const b = backOfFront(base); b.scale = base.scale; const bg = computeGeom(b);
   if (!fit.panel) return b;
-  const fg = computeGeom(base), r = fit.geom.frame, F = fg.frame, B = bg.frame;
-  const rr = [B[0] + (F[2] - r[2]), r[1] - F[1] + B[1], B[0] + (F[2] - r[0]), r[3] - F[1] + B[1]];
-  const pt = Object.create(b); pt.panel = fit.panel; pt.name = `${b.name} · P${fit.panel.k}`;
-  const pg = { ...fit.geom, key: fit.geom.key + '|b', cut: rectSubs(rr), clipRect: rr, frame: rr, poly: null, masks: {}, _rot: null, _pts: null, _cutA: null, _mthumb: null };
+  const fg = computeGeom(base), F = fg.frame, B = bg.frame;
+  const mirror = [-1, 0, 0, 1, B[0] + F[2], B[1] - F[1]];
+  const cut = transformSubs(fit.geom.cut, mirror);
+  const frame = subsBBox(cut);
+  const poly = fit.geom.poly ? fit.geom.poly.map(ring => ring.map(p => Mx.ap(mirror, p[0], p[1]))) : null;
+  const pt = Object.create(b); pt.panel = fit.panel; pt.ekYeri = fit.ekYeri || '';
+  pt.name = `${b.name} · ${fit.panel.tag || ('P' + fit.panel.k)}`;
+  const pg = { ...fit.geom, key: fit.geom.key + '|b', cut, clipRect: frame, frame, poly, masks: {}, _rot: null, _pts: null, _cutA: null, _mthumb: null, _angles: null };
+  pg.wPt = (frame[2] - frame[0]) * pg.s; pg.hPt = (frame[3] - frame[1]) * pg.s; pg.wMm = pg.wPt / PT; pg.hMm = pg.hPt / PT;
   pt.geom = pg; return pt;
 }
 function backSheet(sh) {
@@ -987,7 +993,7 @@ function buildInstances(warns, md) {
     if (g.skip) { warns.push(`${it.name}: bleed doğrulanamadı, "Yalnız doğrulanmış" modunda yerleşime alınmadı.`); return }
     if (g.mode === 'rect' && !it.an.cut.length) warns.push(`${it.name}: CUT çizgisi bulunamadı, ${g.note ? g.note + ' ile ' : ''}dikdörtgen kesildi.`);
     if (!g.verified && S.gapMode === 'auto' && !S.fx) warns.push(`${it.name}: bleed doğrulanmadı, ${S.gapUnverified} mm ek boşluk verildi.`);
-    const parts = md.plates ? (md.plates.some(pl => fitsMedia(g.wMm, g.hMm, g.gap, pl.md, true)) ? [it] : panelize(it, g, md.big, warns)) : panelize(it, g, md, warns);
+    const parts = md.plates ? (md.plates.some(pl => fitsNest(it, g, pl.md)) ? [it] : panelize(it, g, md.big, warns)) : panelize(it, g, md, warns);
     for (let q = 0; q < it.qty; q++) for (const pt of parts) inst.push({ it: pt, idx, q });
   });
   return inst;
@@ -997,7 +1003,7 @@ function fitsMedia(wMm, hMm, gap, md, rot) {
   const b = rot && hMm + gap <= md.usableW && wMm + gap <= md.maxUsableL;
   return a || b;
 }
-function panelize(it, g, md, warns) {
+function equalPanels(it, g, md, warns) {
   const rot = true;
   if (fitsMedia(g.wMm, g.hMm, g.gap, md, rot)) return [it];
   const ov = 0, safe = 3;
@@ -1032,6 +1038,515 @@ function panelize(it, g, md, warns) {
   warns.unshift(`${it.name}: ${fmtCm(g.wMm)} × ${fmtCm(g.hMm)} cm medyaya sığmadı → ${parts.length} panele bölündü (${nxPage}×${nyPage}, panel ${fmtCm(parts[0].geom.wMm)} × ${fmtCm(parts[0].geom.hMm)} cm).`);
   return parts;
 }
+// Pure contour split. Units are the caller's (page points or mm).
+// A seam is a straight line perpendicular to a band axis, lying in a straight
+// band and at least `clear` away from every sharp corner.
+
+function flattenFine(subs, tol) {
+  const rings = [];
+  for (const sp of subs) {
+    const pts = [];
+    let cur = null;
+    const push = p => {
+      if (!pts.length || Math.hypot(p[0] - pts[pts.length - 1][0], p[1] - pts[pts.length - 1][1]) > 1e-6) pts.push(p);
+    };
+    const bez = (p0, p1, p2, p3) => {
+      const rec = (a, b, c, d, depth) => {
+        const flat = (p, q) => Math.hypot(q[0] - p[0], q[1] - p[1]);
+        // sagitta via control deviation from chord
+        const ux = d[0] - a[0], uy = d[1] - a[1], L = Math.hypot(ux, uy) || 1e-9;
+        const dist = p => Math.abs(uy * (p[0] - a[0]) - ux * (p[1] - a[1])) / L;
+        if (depth > 12 || (dist(b) <= tol && dist(c) <= tol && flat(a, d) < tol * 40)) { push(d); return; }
+        const m = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+        const ab = m(a, b), bc = m(b, c), cd = m(c, d);
+        const abc = m(ab, bc), bcd = m(bc, cd);
+        const mid = m(abc, bcd);
+        rec(a, ab, abc, mid, depth + 1);
+        rec(mid, bcd, cd, d, depth + 1);
+      };
+      rec(p0, p1, p2, p3, 0);
+    };
+    for (const c of sp) {
+      if (c[0] === 'M' || c[0] === 'L') { cur = [c[1], c[2]]; push(cur); }
+      else if (c[0] === 'C' && cur) { bez(cur, [c[1], c[2]], [c[3], c[4]], [c[5], c[6]]); cur = [c[5], c[6]]; }
+    }
+    if (pts.length >= 2 && Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]) < 1e-4) pts.pop();
+    if (pts.length >= 3 && Math.abs(ringArea(pts)) > tol * tol) rings.push(pts);
+  }
+  return rings;
+}
+
+function dedup(ring) {
+  const out = [];
+  for (const p of ring) {
+    if (!out.length || Math.hypot(p[0] - out[out.length - 1][0], p[1] - out[out.length - 1][1]) > 1e-7) out.push(p);
+  }
+  if (out.length >= 2 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) < 1e-7) out.pop();
+  return out;
+}
+
+// Half-plane nx*x + ny*y <= c  (nx,ny unit). Multiple rings if the subject splits.
+function clipHalfPlane(poly, nx, ny, c) {
+  const EPS = 1e-8;
+  const src0 = dedup(poly);
+  if (src0.length < 3) return [];
+  const sd = p => nx * p[0] + ny * p[1] - c;
+  const n = src0.length;
+  const seq = [];
+  for (let i = 0; i < n; i++) {
+    const a = src0[i], b = src0[(i + 1) % n];
+    const da = sd(a), db = sd(b);
+    seq.push({ p: a, d: da, x: false });
+    if ((da > EPS && db < -EPS) || (da < -EPS && db > EPS)) {
+      const t = da / (da - db);
+      seq.push({ p: [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])], d: 0, x: true });
+    }
+  }
+  const crosses = seq.filter(v => v.x);
+  if (!crosses.length) {
+    let inn = 0, out = 0;
+    for (const v of seq) { if (v.d > EPS) out++; else if (v.d < -EPS) inn++; }
+    return out && !inn ? [] : [src0];
+  }
+  if (crosses.length % 2) return null; // grazing; caller skips this cut
+  const tx = -ny, ty = nx;
+  const along = p => p[0] * tx + p[1] * ty;
+  const sorted = crosses.slice().sort((a, b) => along(a.p) - along(b.p));
+  for (let k = 0; k < sorted.length; k += 2) {
+    sorted[k].pair = sorted[k + 1];
+    sorted[k + 1].pair = sorted[k];
+    sorted[k].pairLow = true; // lower along-coordinate of the inside segment
+  }
+  const idx = new Map(seq.map((v, i) => [v, i]));
+  const kept = d => d <= EPS;
+  const visitedEdge = new Set();
+  const rings = [];
+  for (let start = 0; start < seq.length; start++) {
+    const st = seq[start];
+    if (!st.x) continue;
+    const nxt = seq[(start + 1) % seq.length];
+    // leave this crossing along the boundary only if the next vertex is inside
+    if (!(kept(nxt.d) || nxt.x)) continue;
+    const ekey = start;
+    if (visitedEdge.has(ekey)) continue;
+    const ring = [];
+    let cur = start;
+    let guard = 0;
+    let jumped = false;
+    while (guard++ < seq.length * 6) {
+      const v = seq[cur];
+      if (visitedEdge.has(cur) && ring.length) break;
+      visitedEdge.add(cur);
+      ring.push(v.p);
+      if (v.x && ring.length > 1 && !jumped) {
+        const forward = seq[(cur + 1) % seq.length];
+        if (!(kept(forward.d) || forward.x)) {
+          const pair = v.pair;
+          if (!pair) return null;
+          cur = idx.get(pair);
+          jumped = true;
+          if (cur === start) break;
+          continue;
+        }
+      }
+      jumped = false;
+      cur = (cur + 1) % seq.length;
+      if (cur === start) break;
+    }
+    const r = dedup(ring);
+    if (r.length >= 3 && Math.abs(ringArea(r)) > 1e-6) rings.push(r);
+  }
+  return rings;
+}
+
+function clipSlab(poly, u, t0, t1) {
+  // keep dot(p,u) in [t0, t1]
+  const left = clipHalfPlane(poly, u[0], u[1], t1);
+  if (left == null) return null;
+  const out = [];
+  for (const r of left) {
+    const right = clipHalfPlane(r, -u[0], -u[1], -t0);
+    if (right == null) return null;
+    for (const q of right) if (Math.abs(ringArea(q)) > 1e-4) out.push(q);
+  }
+  return out;
+}
+
+function turnAngle(a, b, c) {
+  const u = [b[0] - a[0], b[1] - a[1]], v = [c[0] - b[0], c[1] - b[1]];
+  const lu = Math.hypot(u[0], u[1]), lv = Math.hypot(v[0], v[1]);
+  if (lu < 1e-9 || lv < 1e-9) return 0;
+  const cr = u[0] * v[1] - u[1] * v[0];
+  const dt = u[0] * v[0] + u[1] * v[1];
+  return Math.atan2(cr, dt);
+}
+
+function cornersOf(rings, turnMin = 12 * Math.PI / 180) {
+  const cs = [];
+  for (const r of rings) {
+    const n = r.length;
+    for (let i = 0; i < n; i++) {
+      const a = r[(i - 1 + n) % n], b = r[i], c = r[(i + 1) % n];
+      if (Math.abs(turnAngle(a, b, c)) >= turnMin) cs.push(b);
+    }
+  }
+  return cs;
+}
+
+function segDist(a, b, p) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const L2 = dx * dx + dy * dy || 1e-18;
+  let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
+}
+
+function edgeDirOk(a, b, u, ang) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const L = Math.hypot(dx, dy);
+  if (L < 1e-9) return false;
+  const cr = Math.abs(dx * u[1] - dy * u[0]) / L; // |sin|
+  return cr <= Math.sin(ang);
+}
+
+// Intersect line dot(p,u)=t with every edge. Return inside segments [{a,b,ea,eb}] using even-odd.
+function section(rings, u, t) {
+  const v = [-u[1], u[0]];
+  const hits = [];
+  const eps = 1e-7;
+  for (const r of rings) {
+    const n = r.length;
+    for (let i = 0; i < n; i++) {
+      const a = r[i], b = r[(i + 1) % n];
+      const da = a[0] * u[0] + a[1] * u[1] - t;
+      const db = b[0] * u[0] + b[1] * u[1] - t;
+      if (Math.abs(da) <= eps && Math.abs(db) <= eps) continue; // colinear edge
+      if ((da > eps && db > eps) || (da < -eps && db < -eps)) continue;
+      let p, edgeA = a, edgeB = b;
+      if (Math.abs(da) <= eps) p = a;
+      else if (Math.abs(db) <= eps) p = b;
+      else {
+        const s = da / (da - db);
+        if (s < -eps || s > 1 + eps) continue;
+        p = [a[0] + s * (b[0] - a[0]), a[1] + s * (b[1] - a[1])];
+      }
+      const key = p[0] * v[0] + p[1] * v[1];
+      // unique within 1e-4
+      if (hits.some(h => Math.abs(h.key - key) < 1e-4 && Math.hypot(h.p[0] - p[0], h.p[1] - p[1]) < 1e-4)) continue;
+      hits.push({ p, key, a: edgeA, b: edgeB });
+    }
+  }
+  hits.sort((a, b) => a.key - b.key);
+  if (hits.length % 2) return null; // ambiguous
+  const segs = [];
+  for (let i = 0; i < hits.length; i += 2) {
+    segs.push({ a: hits[i].p, b: hits[i + 1].p, ea: [hits[i].a, hits[i].b], eb: [hits[i + 1].a, hits[i + 1].b] });
+  }
+  return segs;
+}
+
+function seamOk(segs, u, corners, clear, wallAng) {
+  if (!segs || !segs.length) return false;
+  for (const s of segs) {
+    if (Math.hypot(s.a[0] - s.b[0], s.a[1] - s.b[1]) < clear * 0.15) return false;
+    if (!edgeDirOk(s.ea[0], s.ea[1], u, wallAng)) return false;
+    if (!edgeDirOk(s.eb[0], s.eb[1], u, wallAng)) return false;
+    for (const c of corners) {
+      if (segDist(s.a, s.b, c) < clear - 1e-6) return false;
+    }
+  }
+  return true;
+}
+
+function bboxOf(rings) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const r of rings) for (const p of r) {
+    if (p[0] < x0) x0 = p[0]; if (p[1] < y0) y0 = p[1];
+    if (p[0] > x1) x1 = p[0]; if (p[1] > y1) y1 = p[1];
+  }
+  return [x0, y0, x1, y1];
+}
+
+function fitsWH(w, h, gap, md, slack) {
+  const a = w + gap + slack <= md.usableW + 1e-6 && h + gap + slack <= md.maxUsableL + 1e-6;
+  const b = h + gap + slack <= md.usableW + 1e-6 && w + gap + slack <= md.maxUsableL + 1e-6;
+  return a || b;
+}
+
+function dimsAt(pts, deg) {
+  const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of pts) {
+    const x = c * p[0] + s * p[1], y = -s * p[0] + c * p[1];
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return [x1 - x0, y1 - y0];
+}
+// Same angle set the nester tries: 0/90 and the minimum-bbox angle (plus its +90).
+function nestAngles(rings) {
+  const pts = rings.flat();
+  let best = 0, ba = Infinity;
+  for (let a = 0; a < 90; a += 3) {
+    const [w, h] = dimsAt(pts, a);
+    if (w * h < ba) { ba = w * h; best = a; }
+  }
+  return [...new Set([0, 90, best, (best + 90) % 180])];
+}
+function pieceFits(rings, gap, md, slack) {
+  const pts = rings.flat();
+  if (pts.length < 3) return false;
+  for (const deg of nestAngles(rings)) {
+    const [w, h] = dimsAt(pts, deg);
+    if (fitsWH(w, h, gap, md, slack)) return true;
+  }
+  return false;
+}
+
+function longAxis(rings) {
+  const pts = rings.flat();
+  let bestA = Infinity, bestU = [1, 0];
+  for (let deg = 0; deg < 180; deg++) {
+    const a = deg * Math.PI / 180, u = [Math.cos(a), Math.sin(a)], v = [-Math.sin(a), Math.cos(a)];
+    let t0 = Infinity, t1 = -Infinity, s0 = Infinity, s1 = -Infinity;
+    for (const p of pts) {
+      const t = p[0] * u[0] + p[1] * u[1], s = p[0] * v[0] + p[1] * v[1];
+      if (t < t0) t0 = t; if (t > t1) t1 = t; if (s < s0) s0 = s; if (s > s1) s1 = s;
+    }
+    const A = (t1 - t0) * (s1 - s0);
+    if (A < bestA) { bestA = A; bestU = (t1 - t0) >= (s1 - s0) ? u : v; }
+  }
+  return bestU;
+}
+
+function edgeDirs(rings) {
+  const bins = new Map();
+  for (const r of rings) {
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length];
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy);
+      if (L < 1) continue;
+      let ang = Math.atan2(dy, dx); if (ang < 0) ang += Math.PI; if (ang >= Math.PI) ang -= Math.PI;
+      const key = Math.round(ang * 180 / Math.PI);
+      const g = bins.get(key) || { L: 0, ang };
+      g.L += L; bins.set(key, g);
+    }
+  }
+  return [...bins.values()].sort((a, b) => b.L - a.L).slice(0, 4).map(g => [Math.cos(g.ang), Math.sin(g.ang)]);
+}
+
+function projectSpan(rings, u) {
+  let t0 = Infinity, t1 = -Infinity;
+  for (const r of rings) for (const p of r) {
+    const t = p[0] * u[0] + p[1] * u[1];
+    if (t < t0) t0 = t; if (t > t1) t1 = t;
+  }
+  return [t0, t1];
+}
+
+function validSeams(rings, u, corners, clear, wallAng) {
+  const [t0, t1] = projectSpan(rings, u);
+  const span = t1 - t0;
+  if (span < clear * 2) return [];
+  const step = Math.min(5, Math.max(1, span / 400));
+  const ts = [];
+  const push = t => { if (t > t0 + 1 && t < t1 - 1) ts.push(t); };
+  for (let t = t0; t <= t1; t += step) push(t);
+  for (const c of corners) push(c[0] * u[0] + c[1] * u[1] + clear);
+  for (const c of corners) push(c[0] * u[0] + c[1] * u[1] - clear);
+  ts.sort((a, b) => a - b);
+  const uniq = [];
+  for (const t of ts) if (!uniq.length || t - uniq[uniq.length - 1] > 0.8) uniq.push(t);
+  const ok = [];
+  for (const t of uniq) {
+    const segs = section(rings, u, t);
+    if (seamOk(segs, u, corners, clear, wallAng)) ok.push({ t, segs });
+  }
+  return ok;
+}
+
+function slabRings(rings, u, tA, tB) {
+  const out = [];
+  for (const r of rings) {
+    const parts = clipSlab(r, u, tA, tB);
+    if (parts == null) return null;
+    for (const p of parts) out.push(p);
+  }
+  return out;
+}
+
+// Greedy farthest cut, limited by maxSpan (along u). Returns seam t's or null.
+function cover(rings, u, seams, gap, md, slack, maxSpan) {
+  const [t0, t1] = projectSpan(rings, u);
+  const cuts = [];
+  let pos = t0;
+  let guard = 0;
+  while (t1 - pos > 1 && guard++ < 12) {
+    const rest = slabRings(rings, u, pos, t1);
+    if (rest && pieceFits(rest, gap, md, slack) && (t1 - pos) <= maxSpan + 1e-6) break;
+    let best = null;
+    for (const s of seams) {
+      if (s.t <= pos + 1) continue;
+      if (s.t - pos > maxSpan + 1e-6) break;
+      const piece = slabRings(rings, u, pos, s.t);
+      if (!piece || !piece.length) continue;
+      if (!pieceFits(piece, gap, md, slack)) continue;
+      best = s.t;
+    }
+    if (best == null) return null;
+    cuts.push(best);
+    pos = best;
+  }
+  if (guard >= 12) return null;
+  const last = slabRings(rings, u, pos, t1);
+  if (!last || !pieceFits(last, gap, md, slack)) return null;
+  return cuts;
+}
+
+function tryDirection(rings, u, gap, md, clear, slack) {
+  const corners = cornersOf(rings);
+  const seams = validSeams(rings, u, corners, clear, 15 * Math.PI / 180);
+  if (!seams.length) return null;
+  const [t0, t1] = projectSpan(rings, u);
+  // minimum count: unlimited span
+  const minCuts = cover(rings, u, seams, gap, md, slack, Infinity);
+  if (!minCuts) return null;
+  // balance: smallest max span that still covers with the same count
+  let lo = (t1 - t0) / (minCuts.length + 1), hi = t1 - t0;
+  let best = minCuts;
+  for (let it = 0; it < 16; it++) {
+    const mid = (lo + hi) / 2;
+    const c = cover(rings, u, seams, gap, md, slack, mid);
+    if (c && c.length <= minCuts.length) { best = c; hi = mid; }
+    else lo = mid;
+  }
+  const cuts = best;
+  const bounds = [t0, ...cuts, t1];
+  const pieces = [];
+  for (let i = 0; i < bounds.length - 1; i++) {
+    const part = slabRings(rings, u, bounds[i], bounds[i + 1]);
+    if (!part || !part.length) return null;
+    pieces.push(part);
+  }
+  const seamPos = cuts.map(t => t - t0); // distance from the t0 end
+  const seamSegs = cuts.map(t => seams.reduce((a, s) => Math.abs(s.t - t) < Math.abs(a.t - t) ? s : a).segs);
+  return { pieces, seamPos, seamSegs, u, n: pieces.length, maxSpan: Math.max(...bounds.slice(1).map((t, i) => t - bounds[i])) };
+}
+
+function splitContour(rings, gap, md, clear, slack = 4) {
+  if (pieceFits(rings, gap, md, 0)) return { pieces: [rings], seamPos: [], seamSegs: [], u: [1, 0] };
+  // slack 0 for the "already fits" test so we don't split a part the nester can place.
+  // Pieces themselves are checked with `slack` so the mask cell still fits.
+  const dirs = [longAxis(rings), ...edgeDirs(rings)];
+  let best = null;
+  const seen = [];
+  for (const u0 of dirs) {
+    const u = [u0[0], u0[1]];
+    if (seen.some(s => Math.abs(s[0] * u[0] + s[1] * u[1]) > 0.996)) continue;
+    seen.push(u);
+    for (const flip of [u, [-u[0], -u[1]]]) {
+      const r = tryDirection(rings, flip, gap, md, clear, slack);
+      if (!r) continue;
+      if (!best || r.n < best.n - 1e-9 || (r.n === best.n && r.maxSpan < best.maxSpan - 1e-6)) best = r;
+    }
+  }
+  return best;
+}
+
+function subsOfRings(rings) {
+  return rings.map(r => [['M', r[0][0], r[0][1]], ...r.slice(1).map(p => ['L', p[0], p[1]]), ['Z']]);
+}
+
+
+function fitsNest(it, g, md) {
+  const angs = g.poly ? rotationsFor(it) : [0, 90];
+  for (const a of angs) {
+    const [w, h] = rotDims(g, a);
+    if (w + g.gap <= md.usableW + 1e-3 && h + g.gap <= md.maxUsableL + 1e-3) return true;
+  }
+  return false;
+}
+function piecePlaceable(pt, md) {
+  const pg = pt.geom, angs = pg.poly ? rotationsFor(pt) : [0, 90];
+  for (const a of angs) {
+    const [w, h] = rotDims(pg, a);
+    if (w + pg.gap <= md.usableW + 1e-3 && h + pg.gap <= md.maxUsableL + 1e-3) return true;
+  }
+  return false;
+}
+function withLetter(name, letter) {
+  const m = String(name).match(/^(.*?)(\d+)\s*$/);
+  return m ? m[1] + m[2] + letter : name + ' · ' + letter;
+}
+function tagOf(name, letter) {
+  const m = String(name).match(/(\d+)\s*$/);
+  return (m ? m[1] : '') + letter;
+}
+function geomFromCut(it, g, cut, frame) {
+  const rule = it.evenodd ? 'evenodd' : 'nonzero';
+  const off = S.fx ? 0 : S.bleed * PT / g.s;
+  // Foreks/alü: ayak izi kesim çizgisinin kendisi. Folyoda 3 mm bleed raster ofseti korunur.
+  const poly = off > 0 ? offsetPolygon(cut, off, bbExpand(frame, off + 2), rule) : null;
+  const src = poly && poly.length ? poly : flattenFine(cut, 0.05);
+  let fb = null;
+  for (const l of src) for (const p of l) fb = bbUnion(fb, [p[0], p[1], p[0], p[1]]);
+  if (!fb) fb = frame;
+  const pg = { key: g.key, s: g.s, mode: 'shape', poly: poly && poly.length ? poly : src, cut, clipRect: fb, frame: fb, verified: g.verified, gap: g.gap, skip: false, note: '', masks: {} };
+  pg.wPt = (fb[2] - fb[0]) * g.s; pg.hPt = (fb[3] - fb[1]) * g.s; pg.wMm = pg.wPt / PT; pg.hMm = pg.hPt / PT;
+  pg.areaMm = cutAreaMm(pg); pg.area = pg.areaMm * PT * PT;
+  return pg;
+}
+// Gerçek kontur, bindirme 0. Kontur bölünemeyen dikdörtgen iş eşit panele (equalPanels) düşer.
+function contourSplit(it, g, md) {
+  const key = [g.key, md.usableW.toFixed(2), md.maxUsableL.toFixed(2), g.gap, S.fx ? 1 : 0, S.bleed].join('|');
+  if (it._ctr && it._ctr.key === key) return it._ctr;
+  const fail = { key, parts: null, warns: [] };
+  let rings;
+  try { rings = flattenFine(g.cut, 0.05).map(r => r.map(p => [p[0] * g.s / PT, p[1] * g.s / PT])); }
+  catch (e) { return it._ctr = fail; }
+  if (!rings.length) return it._ctr = fail;
+  const slack = S.fx ? 6 : 6 + 2 * (S.bleed || 0);
+  const res = splitContour(rings, g.gap, md, 50, slack);
+  if (!res) return it._ctr = fail;
+  if (!res.seamPos.length) return it._ctr = { key, parts: [it], warns: [] };
+  const letters = res.pieces.map((_, i) => String.fromCharCode(97 + i));
+  const tags = letters.map(L => tagOf(it.name, L)).filter(Boolean).join('/');
+  const cms = res.seamPos.map(mm => fmtCm(mm) + ' cm');
+  const list = cms.length === 1 ? cms[0] : cms.slice(0, -1).join(', ') + ' ve ' + cms[cms.length - 1];
+  const ek = (tags ? tags + ' ' : '') + 'uçtan ' + list;
+  const parts = [];
+  for (let i = 0; i < res.pieces.length; i++) {
+    const ringsPt = res.pieces[i].map(r => r.map(p => [p[0] * PT / g.s, p[1] * PT / g.s]));
+    const cut = subsOfRings(ringsPt);
+    let fr = null;
+    for (const r of ringsPt) for (const p of r) fr = bbUnion(fr, [p[0], p[1], p[0], p[1]]);
+    const pt = Object.create(it);
+    pt.name = withLetter(it.name, letters[i]);
+    pt.rotate = true;
+    pt.ekYeri = ek;
+    pt.panel = { k: i + 1, n: res.pieces.length, letter: letters[i], tag: tagOf(it.name, letters[i]), seams: res.seamPos.slice() };
+    pt.geom = geomFromCut(it, g, cut, fr);
+    pt.geom.key = g.key + '|c' + (i + 1);
+    parts.push(pt);
+  }
+  const a0 = cutAreaMm(g), a1 = parts.reduce((s, p) => s + cutAreaMm(p.geom), 0);
+  if (!(a0 > 0) || Math.abs(a1 - a0) > Math.max(1, a0 * 0.001)) return it._ctr = fail;
+  if (!parts.every(p => piecePlaceable(p, md))) return it._ctr = fail;
+  const warn = `${it.name}: ${parts.length} parçaya bölündü (${ek}).`;
+  return it._ctr = { key, parts, warns: [warn] };
+}
+function panelize(it, g, md, warns) {
+  if (fitsNest(it, g, md)) return [it];
+  if (g.cut && g.cut.length) {
+    const ctr = contourSplit(it, g, md);
+    if (ctr.parts && ctr.parts[0] !== it) { for (const w of ctr.warns) warns.unshift(w); return ctr.parts; }
+    if (ctr.parts && ctr.parts[0] === it) return [it];
+  }
+  // Kontur bölünemiyorsa: dikdörtgen iş eşit panel (bindirme 0); şekilli iş elle bölün, sahte dikdörtgen yok.
+  if (g.mode !== 'shape') return equalPanels(it, g, md, warns);
+  warns.unshift(`${it.name}: uygun düz ek yeri yok, elle bölün.`);
+  return [it];
+}
+
 const SCORES = { top: (tp, y, x) => tp + x * 1e-7, mix: (tp, y, x) => tp * 0.7 + y * 0.3 + x * 1e-7, center: (tp, y, x) => (tp + y) / 2 + x * 1e-7 };
 function maskRuns(m) {
   if (m.runs) return m.runs;
@@ -1403,7 +1918,7 @@ function partsNote() { if (!(S.fx && S.splitParts)) return ''; const w = workIte
 
 /* ---------------- önizleme ---------------- */
 let zoomZ = null, zoomKeep = false, zoomAnchor = null; // null = sığdır
-function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlBack', '#dlCut', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
+function renderAll() { updateRevLbl(); renderSheets(); renderPreview(); renderStats(); renderTable(); const ok = !!(layout && layout.sheets.length); ['#dlPrint', '#dlBack', '#dlCut', '#dlDxf', '#dlCsv', '#dlDeck'].forEach(s => $(s).disabled = !ok); }
 function renderSheets() {
   const el = $('#sheets'); el.innerHTML = '';
   if (!layout) return;
@@ -1546,13 +2061,19 @@ function cutAreaMm(g) {
   }
   return g._cutA = Math.abs(A) * g.s * g.s / PT / PT;
 }
+function shownWarns() {
+  const pri = layout.warns.filter(x => /bölündü|elle bölün/.test(x));
+  const rest = layout.warns.filter(x => !/bölündü|elle bölün/.test(x));
+  const all = pri.concat(rest), cap = Math.max(8, pri.length);
+  return { list: all.slice(0, cap), more: Math.max(0, all.length - cap) };
+}
 function renderStats() {
   const el = $('#stats'), w = $('#warns'); el.innerHTML = ''; w.innerHTML = '';
   if (!layout) return;
   const md = layout.md, roll = md.rollCm * 10; let A = 0, n = 0, Ltot = 0, Atot = 0;
   let prints = 0; layout.sheets.forEach(s => { const c = s.copies || 1; prints += c; Ltot += s.L * c; Atot += s.W * s.L * c; for (const p of s.pl) { A += cutAreaMm(p.it.geom) * c; n += c; } });
   const sh = layout.sheets[curSheet];
-  if (!sh) { for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); } return; }
+  if (!sh) { const _w0 = shownWarns(); for (const x of _w0.list) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); } if (_w0.more) { const d = document.createElement('div'); d.textContent = `+${_w0.more} uyarı daha`; w.appendChild(d); } return; }
   let a2 = 0; if (sh) for (const p of sh.pl) a2 += cutAreaMm(p.it.geom);
   const faces = S.duplex ? 2 : 1; A *= faces; a2 *= faces;
   const F = roll * Ltot * faces, f2 = sh ? roll * sh.L * faces : 1, pc = v => (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + '%', m2 = v => (v / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' m²';
@@ -1596,8 +2117,9 @@ function renderStats() {
       ['Kalan parça', `${layout.free} / ${layout.plateCount}`]);
   }
   for (const [k, v] of st) { const d = document.createElement('div'); d.className = 'stat' + (/^Kullanılan (folyo|foreks|alüminyum)/.test(k) || k === 'Bu plakada kullanılan' || k === 'Bu plakadan kalan' ? ' wide' : ''); d.innerHTML = `<span>${k}</span><b>${v}</b>`; el.appendChild(d); }
-  for (const x of layout.warns.slice(0, 8)) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
-  if (layout.warns.length > 8) { const d = document.createElement('div'); d.textContent = `+${layout.warns.length - 8} uyarı daha`; w.appendChild(d); }
+  const _ws = shownWarns();
+  for (const x of _ws.list) { const d = document.createElement('div'); d.textContent = x; w.appendChild(d); }
+  if (_ws.more) { const d = document.createElement('div'); d.textContent = `+${_ws.more} uyarı daha`; w.appendChild(d); }
 }
 function renderTable() {
   const t = $('#tbl'); t.innerHTML = '';
@@ -1784,12 +2306,12 @@ async function buildCutPdf(only = null) {
   return out.save();
 }
 function buildCsv() {
-  const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim', 'Taban']];
+  const rows = [['REV', 'Sayfa', 'Kopya', 'Sayfa eni mm', 'Sayfa boyu mm', 'Is', 'Dosya', 'PDF sayfa', 'X mm', 'Y mm', 'Donus', 'En mm', 'Boy mm', 'Olcek %', 'Kesim', 'Taban', 'Ek yeri']];
   layout.sheets.forEach((s, si) => s.pl.forEach(p => {
     const [w, h] = rotDims(p.it.geom, p.rot);
-    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.fx ? (S.alu ? `aluminyum plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm ${fmtThk(S.aluThk)} mm ${ALU_NAME[S.aluMethod]}` : `foreks plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm`) : s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`]);
+    rows.push([layout.rev || '', si + 1, s.copies || 1, s.W.toFixed(1), s.L.toFixed(1), p.it.name, p.it.file.name, p.it.pageIndex + 1, p.X.toFixed(2), p.Y.toFixed(2), p.rot, w.toFixed(2), h.toFixed(2), p.it.scale, p.it.geom.mode === 'shape' ? 'sekil' : 'dikdortgen', s.fx ? (S.alu ? `aluminyum plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm ${fmtThk(S.aluThk)} mm ${ALU_NAME[S.aluMethod]}` : `foreks plaka ${fmtCm(s.W)}x${fmtCm(s.L)} cm`) : s.plate ? `foreks parca ${fmtCm(s.W)}x${fmtCm(s.L)} cm` : `folyo ${layout.md.rollCm} cm`, p.it.ekYeri || '']);
   }));
-  return '﻿' + rows.map(r => r.map(v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
+  return '﻿' + rows.map(r => r.map(v => /[;"\n,]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(';')).join('\r\n');
 }
 // İsteğe bağlı dosya adı: boşsa yalnız REV numarası; doluysa REV-0001_<AD>_... (REV sırası her zaman korunur).
 const NAME_MAX = 80;
@@ -1858,6 +2380,37 @@ async function downloadCut() {
   if (saved) { if (layout.fx) commitRev(); toast(`${saved}/${n} kesim sayfası ayrı PDF olarak indirildi`); }
 }
 $('#dlCut').onclick = e => withBusy(e.currentTarget, downloadCut);
+
+function sheetDxf(sh) {
+  let ents = '';
+  for (const p of sh.pl) {
+    const M = placeMatrix(p.it, p.rot, p.X * PT, p.Y * PT);
+    for (const sp of transformSubs(p.it.geom.cut, M)) {
+      const ring = flattenFine([sp], 0.05)[0];
+      if (!ring || ring.length < 2) continue;
+      const pts = ring.map(q => [q[0] / PT, q[1] / PT]);
+      ents += '0\nLWPOLYLINE\n8\nCUT\n90\n' + pts.length + '\n70\n1\n';
+      for (const q of pts) ents += '10\n' + q[0].toFixed(4) + '\n20\n' + q[1].toFixed(4) + '\n';
+    }
+  }
+  for (const m of sh.marks) ents += '0\nCIRCLE\n8\nREGISTER\n10\n' + m.x.toFixed(4) + '\n20\n' + m.y.toFixed(4) + '\n40\n' + (S.regDia / 2).toFixed(4) + '\n';
+  return '0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1015\n9\n$INSUNITS\n70\n4\n9\n$MEASUREMENT\n70\n1\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n3\n0\nLAYER\n2\n0\n70\n0\n62\n7\n0\nLAYER\n2\nCUT\n70\n0\n62\n1\n0\nLAYER\n2\nREGISTER\n70\n0\n62\n7\n0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n' + ents + '0\nENDSEC\n0\nEOF\n';
+}
+async function downloadDxf() {
+  ensureRev();
+  const n = layout.sheets.length;
+  if (n === 1) { await saveFile(`${fileBase()}_KESIM.dxf`, sheetDxf(layout.sheets[0]), 'application/dxf'); return; }
+  let saved = 0;
+  for (let i = 0; i < n; i++) {
+    const cp = layout.sheets[i].copies || 1;
+    const name = `${revName()}_SAYFA-${i + 1}${cp > 1 && !nameHasCopy() ? `_${cp}-KOPYA` : ''}_KESIM.dxf`;
+    if (!(await saveFile(name, sheetDxf(layout.sheets[i]), 'application/dxf'))) break;
+    saved++; if (i < n - 1) await sleep(400);
+  }
+  if (saved) toast(`${saved}/${n} kesim sayfası ayrı DXF olarak indirildi`);
+}
+$('#dlDxf').onclick = e => withBusy(e.currentTarget, downloadDxf);
+
 $('#dlCsv').onclick = e => withBusy(e.currentTarget, async () => { ensureRev(); await saveFile(`${fileBase()}_YERLESIM.csv`, buildCsv(), 'text/csv'); });
 
 /* ---------------- sunum: müşteriye görsel onay paftası ---------------- */
@@ -2088,7 +2641,7 @@ $('#fxStd').onclick = () => { S.fxW = 156; S.fxL = 305; syncFx(); scheduleNest(1
 $$('#dupSel button').forEach(b => b.onclick = () => { S.duplex = b.dataset.d === '1'; if (S.duplex) pairBacks(); syncDup(); renderItems(); scheduleNest(100); });
 syncDup(); syncFx();
 syncG(); bindSettings(); renderMedia(); updateRevLbl();
-window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, samplePdf, loadPdf, runNest, get artik() { return artik }, set artik(v) { artik = v; saveArtik(); renderArtik(); } };
+window.__nest = { backSheet, placeMatrix, path2d, Mx, buildDeckPdf, offsetPolygon, traceMask, computeGeom, items, get layout() { return layout }, S, buildPrintPdf, buildCutPdf, sheetDxf, buildCsv, samplePdf, loadPdf, runNest, get artik() { return artik }, set artik(v) { artik = v; saveArtik(); renderArtik(); } };
 </script>
 </body>
 </html>
