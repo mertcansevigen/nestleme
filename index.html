@@ -920,8 +920,9 @@ function backDrawItem(fit) {
   const fg = computeGeom(base), F = fg.frame, B = bg.frame;
   const mirror = [-1, 0, 0, 1, B[0] + F[2], B[1] - F[1]];
   const cut = transformSubs(fit.geom.cut, mirror);
-  const frame = subsBBox(cut);
   const poly = fit.geom.poly ? fit.geom.poly.map(ring => ring.map(p => Mx.ap(mirror, p[0], p[1]))) : null;
+  // Taşma (bleed) ayak izi kesim kutusundan büyük olabilir; arka baskı da aynı çerçeveye kırpılır.
+  const frame = poly && poly.length ? subsBBox(polysToSubs(poly)) : subsBBox(cut);
   const pt = Object.create(b); pt.panel = fit.panel; pt.ekYeri = fit.ekYeri || '';
   pt.name = `${b.name} · ${fit.panel.tag || ('P' + fit.panel.k)}`;
   const pg = { ...fit.geom, key: fit.geom.key + '|b', cut, clipRect: frame, frame, poly, masks: {}, _rot: null, _pts: null, _cutA: null, _mthumb: null, _angles: null };
@@ -1433,9 +1434,8 @@ function tryDirection(rings, u, gap, md, clear, slack) {
 }
 
 function splitContour(rings, gap, md, clear, slack = 4) {
-  if (pieceFits(rings, gap, md, 0)) return { pieces: [rings], seamPos: [], seamSegs: [], u: [1, 0] };
-  // slack 0 for the "already fits" test so we don't split a part the nester can place.
-  // Pieces themselves are checked with `slack` so the mask cell still fits.
+  // Çağıran fitsNest ile ayak izinin sığmadığını biliyor. Kesimin kendisi sığsa da
+  // taşma sığmayabilir; burada erken dönüş parçayı bölmeden bırakır.
   const dirs = [longAxis(rings), ...edgeDirs(rings)];
   let best = null;
   const seen = [];
@@ -1506,8 +1506,11 @@ function contourSplit(it, g, md) {
   if (!rings.length) return it._ctr = fail;
   const slack = S.fx ? 6 : 6 + 2 * (S.bleed || 0);
   const res = splitContour(rings, g.gap, md, 50, slack);
-  if (!res) return it._ctr = fail;
-  if (!res.seamPos.length) return it._ctr = { key, parts: [it], warns: [] };
+  if (!res || !res.seamPos.length) return it._ctr = fail;
+  // Alan, orijinal ve parçalar için aynı ince poliline üzerinden. cutAreaMm eğriyi 10 adımda örnekler; o fark sahte "elle bölün" üretir.
+  const ringA = rs => rs.reduce((s, r) => s + r.reduce((a, p, i) => { const q = r[(i + 1) % r.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2, 0);
+  const a0 = ringA(rings), a1 = res.pieces.reduce((s, rs) => s + ringA(rs), 0);
+  if (!(Math.abs(a0) > 0) || Math.abs(a1 - a0) > Math.max(1, Math.abs(a0) * 0.001)) return it._ctr = fail;
   const letters = res.pieces.map((_, i) => String.fromCharCode(97 + i));
   const tags = letters.map(L => tagOf(it.name, L)).filter(Boolean).join('/');
   const cms = res.seamPos.map(mm => fmtCm(mm) + ' cm');
@@ -1528,8 +1531,6 @@ function contourSplit(it, g, md) {
     pt.geom.key = g.key + '|c' + (i + 1);
     parts.push(pt);
   }
-  const a0 = cutAreaMm(g), a1 = parts.reduce((s, p) => s + cutAreaMm(p.geom), 0);
-  if (!(a0 > 0) || Math.abs(a1 - a0) > Math.max(1, a0 * 0.001)) return it._ctr = fail;
   if (!parts.every(p => piecePlaceable(p, md))) return it._ctr = fail;
   const warn = `${it.name}: ${parts.length} parçaya bölündü (${ek}).`;
   return it._ctr = { key, parts, warns: [warn] };
